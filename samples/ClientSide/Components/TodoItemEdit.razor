@@ -1,0 +1,30 @@
+﻿@using Skclusive.Mobx.Component
+
+@inherits ObservableComponentBase
+
+<TodoTextInput
+    Editing
+    Text="@Todo.Title"
+    OnSave="@_OnSave"
+/>
+
+@code {
+    [Parameter]
+    public ITodo Todo { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    protected void _OnSave(string title)
+    {
+        if (string.IsNullOrEmpty(title))
+        {
+            Todo.Remove();
+        } else
+        {
+            Todo.Edit(title);
+        }
+
+        OnSave.InvokeAsync(null);
+    }
+}

@@ -51,6 +51,19 @@ namespace Skclusive.Mobx.StateTree
             return target.GetStateTreeNode().Root.StoredValue.GetStateTree();
         }
 
+        public static void Destroy(this object node)
+        {
+            ObjectNode objectNode = node.GetStateTreeNode();
+
+            if (objectNode.IsRoot)
+            {
+                objectNode.Dispose();
+            } else
+            {
+                objectNode.Parent.RemoveChild(objectNode.Subpath);
+            }
+        }
+
         public static ObjectNode GetStateTreeNode(this IStateTreeNode node, bool throwing = true)
         {
             return node.TreeNode as ObjectNode;

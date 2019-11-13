@@ -26,7 +26,7 @@ namespace Skclusive.Mobx.StateTree
 
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
         {
-            if (value.GetType().IsPrimitive && EqualityComparer<object>.Default.Equals(value, Value))
+            if (value != null && (value is string || value.GetType().IsPrimitive) && EqualityComparer<object>.Default.Equals(value, Value))
             {
                 return new IValidationError[] { };
             }

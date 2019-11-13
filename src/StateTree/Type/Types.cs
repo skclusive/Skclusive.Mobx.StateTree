@@ -91,7 +91,7 @@ namespace Skclusive.Mobx.StateTree
             return type is IType;
         }
 
-        public static bool isPrimitiveType(object type)
+        public static bool IsPrimitiveType(object type)
         {
             return (
                 IsType(type) &&
@@ -140,7 +140,7 @@ namespace Skclusive.Mobx.StateTree
 
         public static ISimpleType<T> Literal<T>(T value)
         {
-            if (!value.GetType().IsPrimitive)
+            if (!(value is string || value.GetType().IsPrimitive))
             {
                 throw new InvalidOperationException("Literal types can be built only on top of primitives");
             }

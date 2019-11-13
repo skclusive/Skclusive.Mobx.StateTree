@@ -67,6 +67,16 @@ namespace Skclusive.Mobx.StateTree
             }
         }
 
+        // Custom Method
+        public override void ApplySnapshot(INode node, object snapshot)
+        {
+            //if (snapshot is IList<T> list)
+            //{
+            //    snapshot = list.Select(item => item.IsStateTreeNode() ? item.GetSnapshot<S>() : (S)(object)item).ToArray();
+            //}
+            base.ApplySnapshot(node, snapshot);
+        }
+
         public override void ApplySnapshot(INode node, S[] snapshot)
         {
             StateTreeUtils.Typecheck(this, snapshot);

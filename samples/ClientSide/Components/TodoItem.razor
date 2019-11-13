@@ -1,0 +1,32 @@
+﻿@using Skclusive.Mobx.Component
+
+@inherits ObservableComponentBase
+
+<li class="@Class">
+    @if (Editing)
+    {
+        <TodoItemEdit Todo="@Todo" OnSave="OnSave" />
+    } else
+    {
+        <TodoItemView Todo="@Todo" OnEdit="OnEdit" />
+    }
+</li>
+
+@code {
+    [Parameter]
+    public ITodo Todo { get; set; }
+
+    protected bool Editing { set; get; }
+
+    protected string Class => (Todo.Done ? "completed " : "") + (Editing ? "editing" : "");
+
+    protected void OnEdit()
+    {
+        Editing = true;
+    }
+
+    protected void OnSave()
+    {
+        Editing = false;
+    }
+}

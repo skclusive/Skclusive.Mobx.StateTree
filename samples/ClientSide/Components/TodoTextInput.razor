@@ -1,0 +1,70 @@
+﻿@using Skclusive.Mobx.Component
+@using Skclusive.Mobx.Observable
+
+@inherits ObservableComponentBase
+
+<input type="text"
+       autofocus
+       class="@Class"
+       placeholder="@Placeholder"
+       value="@_Text.Value"
+       @onblur="@HandleBlur"
+       @oninput="@HandleChange"
+       @onkeydown="@HandleSubmit"
+       @oninput:preventDefault />
+
+@code {
+
+    [Parameter]
+    public string Placeholder { get; set; }
+
+    [Parameter]
+    public string Text { get; set; }
+
+    [Parameter]
+    public bool Editing { get; set; }
+
+    [Parameter]
+    public bool NewTodo { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSave { get; set; }
+
+    protected IObservableValue<string> _Text { set; get; } = ObservableValue<string>.From("");
+
+    protected string Class => (Editing ? "edit " : "") + (NewTodo ? "new-todo" : "");
+
+    protected void HandleChange(ChangeEventArgs changeEvent)
+    {
+        _Text.Value = changeEvent.Value.ToString();
+    }
+
+    protected void OnParameterSet()
+    {
+        if (!string.IsNullOrEmpty(Text))
+        {
+            _Text.Value = Text;
+        }
+    }
+
+    protected void HandleSubmit(KeyboardEventArgs keyboardEvent)
+    {
+        if (keyboardEvent.Key == "Enter")
+        {
+            OnSave.InvokeAsync(_Text.Value);
+
+            if (NewTodo)
+            {
+                _Text.Value = "";
+            }
+        }
+    }
+
+    protected void HandleBlur(FocusEventArgs focusEvent)
+    {
+        if (!NewTodo)
+        {
+            OnSave.InvokeAsync(_Text.Value);
+        }
+    }
+}
