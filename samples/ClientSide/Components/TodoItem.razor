@@ -1,12 +1,14 @@
 ﻿@using Skclusive.Mobx.Component
+@using Skclusive.Mobx.Observable
 
 @inherits ObservableComponentBase
 
 <li class="@Class">
-    @if (Editing)
+    @if (Editing.Value)
     {
         <TodoItemEdit Todo="@Todo" OnSave="OnSave" />
-    } else
+    }
+    else
     {
         <TodoItemView Todo="@Todo" OnEdit="OnEdit" />
     }
@@ -16,17 +18,26 @@
     [Parameter]
     public ITodo Todo { get; set; }
 
-    protected bool Editing { set; get; }
+    protected IObservableValue<bool> Editing { set; get; } = ObservableValue<bool>.From(false);
 
-    protected string Class => (Todo.Done ? "completed " : "") + (Editing ? "editing" : "");
+    protected string Class => ((Todo.Done ? "completed " : "") + (Editing.Value ? "editing" : "")).Trim();
 
     protected void OnEdit()
     {
-        Editing = true;
+        Editing.Value = true;
     }
 
-    protected void OnSave()
+    protected void OnSave(string title)
     {
-        Editing = false;
+        if (string.IsNullOrEmpty(title))
+        {
+            Todo.Remove();
+        }
+        else
+        {
+            Todo.Edit(title);
+        }
+
+        Editing.Value = false;
     }
 }

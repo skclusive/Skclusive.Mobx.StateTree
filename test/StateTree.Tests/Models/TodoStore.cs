@@ -15,6 +15,8 @@ namespace ClientSide.Models
 
     public interface ITodoStoreActions
     {
+        void AddTodo(string title);
+
         void SetFilter(string filter);
 
         void Remove(ITodo todo);
@@ -73,6 +75,11 @@ namespace ClientSide.Models
         public int ActiveCount => Read<int>(nameof(ActiveCount));
 
         public int CompletedCount => Read<int>(nameof(CompletedCount));
+
+        public void AddTodo(string title)
+        {
+            (Target as dynamic).AddTodo(title);
+        }
 
         public void Remove(ITodo todo)
         {

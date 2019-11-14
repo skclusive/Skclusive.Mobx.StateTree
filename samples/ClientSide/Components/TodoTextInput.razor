@@ -1,14 +1,12 @@
 ﻿@using Skclusive.Mobx.Component
-@using Skclusive.Mobx.Observable
 
-@inherits ObservableComponentBase
+@inherits PureComponentBase
 
 <input type="text"
        autofocus
        class="@Class"
        placeholder="@Placeholder"
-       value="@_Text.Value"
-       @onblur="@HandleBlur"
+       value="@_Text"
        @oninput="@HandleChange"
        @onkeydown="@HandleSubmit"
        @oninput:preventDefault />
@@ -30,20 +28,22 @@
     [Parameter]
     public EventCallback<string> OnSave { get; set; }
 
-    protected IObservableValue<string> _Text { set; get; } = ObservableValue<string>.From("");
+    protected string _Text { set; get; }
 
     protected string Class => (Editing ? "edit " : "") + (NewTodo ? "new-todo" : "");
 
     protected void HandleChange(ChangeEventArgs changeEvent)
     {
-        _Text.Value = changeEvent.Value.ToString();
+        _Text = changeEvent.Value.ToString();
+
+        StateHasChanged();
     }
 
-    protected void OnParameterSet()
+    protected override void OnParametersSet()
     {
         if (!string.IsNullOrEmpty(Text))
         {
-            _Text.Value = Text;
+            _Text = Text;
         }
     }
 
@@ -51,20 +51,22 @@
     {
         if (keyboardEvent.Key == "Enter")
         {
-            OnSave.InvokeAsync(_Text.Value);
+            OnSave.InvokeAsync(_Text);
 
             if (NewTodo)
             {
-                _Text.Value = "";
+                _Text = "";
+
+                StateHasChanged();
             }
         }
     }
 
-    protected void HandleBlur(FocusEventArgs focusEvent)
-    {
-        if (!NewTodo)
-        {
-            OnSave.InvokeAsync(_Text.Value);
-        }
-    }
+    //protected void HandleBlur(FocusEventArgs focusEvent)
+    //{
+    //    if (!NewTodo)
+    //    {
+    //        OnSave.InvokeAsync(_Text);
+    //    }
+    //}
 }

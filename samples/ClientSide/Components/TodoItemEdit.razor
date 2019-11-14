@@ -13,18 +13,10 @@
     public ITodo Todo { get; set; }
 
     [Parameter]
-    public EventCallback OnSave { get; set; }
+    public EventCallback<string> OnSave { get; set; }
 
     protected void _OnSave(string title)
     {
-        if (string.IsNullOrEmpty(title))
-        {
-            Todo.Remove();
-        } else
-        {
-            Todo.Edit(title);
-        }
-
-        OnSave.InvokeAsync(null);
+        OnSave.InvokeAsync(title);
     }
 }

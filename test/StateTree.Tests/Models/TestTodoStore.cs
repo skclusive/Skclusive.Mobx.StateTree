@@ -153,5 +153,77 @@ namespace ClientSide.Models
 
             Assert.Equal("Learn Blazor", store.Todos[0].Title);
         }
+
+        [Fact]
+        public void TestAddTodo()
+        {
+            var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = "ShowAll",
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            Assert.Equal(1, store.TotalCount);
+
+            store.AddTodo("Learn Blazor");
+
+            Assert.Equal(2, store.TotalCount);
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+
+            Assert.Equal("Get coffee", store.Todos[1].Title);
+        }
+
+        [Fact]
+        public void TestEditTodo()
+        {
+            var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = "ShowAll",
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            Assert.Equal("Get coffee", store.Todos[0].Title);
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Equal(1, store.TotalCount);
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+        }
+
+        [Fact]
+        public void TestNoEditTodo()
+        {
+            var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = "ShowAll",
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            Assert.Equal("Get coffee", store.Todos[0].Title);
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+        }
     }
 }

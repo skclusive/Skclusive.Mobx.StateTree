@@ -10,12 +10,13 @@
     <PackageReference Include="Microsoft.AspNetCore.Blazor.Build" Version="3.1.0-preview2.19528.8" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.Blazor.HttpClient" Version="3.1.0-preview2.19528.8" />
     <PackageReference Include="Microsoft.AspNetCore.Blazor.DevServer" Version="3.1.0-preview2.19528.8" PrivateAssets="all" />
-    <PackageReference Include="Skclusive.Mobx.Observable" Version="1.0.0" />
-    <PackageReference Include="Skclusive.Mobx.Component" Version="1.0.0" />
+    <PackageReference Include="Skclusive.Mobx.Observable" Version="1.0.1" />
+    <PackageReference Include="Skclusive.Mobx.Component" Version="1.0.1" />
+    <PackageReference Include="Skclusive.Mobx.StateTree" Version="1.0.1" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- <ItemGroup>
     <ProjectReference Include="..\..\src\StateTree\StateTree.csproj" />
-  </ItemGroup>
+  </ItemGroup> -->
 
 </Project>
