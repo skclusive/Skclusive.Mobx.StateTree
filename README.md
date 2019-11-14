@@ -130,6 +130,8 @@ store.Todos[0].Toggle();
 
 The TodoMVC sample project has been hosted [here](https://skclusive.github.io/Skclusive.Mobx.StateTree/).
 
+![Blazor TodoMVC App](images/todo-app.gif)
+
 ### Installation
 
 Add a reference to the library from [![NuGet](https://img.shields.io/nuget/v/Skclusive.Mobx.StateTree.svg)](https://www.nuget.org/packages/Skclusive.Mobx.StateTree/)
