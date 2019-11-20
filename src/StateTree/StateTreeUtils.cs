@@ -46,11 +46,12 @@ namespace Skclusive.Mobx.StateTree
 
         public static string GetRelativePathBetweenNodes(ObjectNode from, ObjectNode to)
         {
+            // TODO: investigate below commented code on node removal
             //pre condition is to is child of from
-            if (from.Root != to.Root)
-            {
-                throw new InvalidOperationException($"Cannot calculate relative path: objects '{from}' and '{to}' are not part of the same object tree");
-            }
+            //if (from.Root != to.Root)
+            //{
+            //    throw new InvalidOperationException($"Cannot calculate relative path: objects '{from}' and '{to}' are not part of the same object tree");
+            //}
 
             var fromPaths = from.Path.SplitJsonPath();
             var toPaths = to.Path.SplitJsonPath();

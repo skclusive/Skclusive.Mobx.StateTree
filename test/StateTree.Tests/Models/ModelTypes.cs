@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Skclusive.Mobx.Observable;
 using Skclusive.Mobx.StateTree;
 
 namespace ClientSide.Models
@@ -24,6 +25,8 @@ namespace ClientSide.Models
             { "ShowCompleted", (todo) => todo.Done }
         };
 
+        public readonly static IType<ITodoSnapshot[], IObservableList<INode, ITodo>> TodoListType = Types.List(TodoType);
+
         public readonly static IObjectType<ITodoStoreSnapshot, ITodoStore> StoreType = Types.
                         Object<ITodoStoreSnapshot, ITodoStore>("Store")
                        .Proxy(x => new TodoStoreProxy(x))
@@ -42,6 +45,6 @@ namespace ClientSide.Models
                        })
                        .Action<string>((o) => o.SetFilter(null), (o, filter) => o.Filter = filter)
                        .Action<string>((o) => o.AddTodo(null), (o, title) => o.Todos.Insert(0, TodoType.Create(new TodoSnapshot { Title = title })))
-                       .Action<ITodo>((o) => o.Remove(null), (o, x) => x.Destroy());
+                       .Action<ITodo>((o) => o.Remove(null), (o, x) => o.Todos.Remove(x));
     }
 }

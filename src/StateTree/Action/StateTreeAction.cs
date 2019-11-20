@@ -133,71 +133,69 @@ namespace Skclusive.Mobx.StateTree
 
             object RunMiddlewares(IMiddlewareEvent call)
             {
-                if (middlewares.MoveNext())
+                IMiddleware middleware = middlewares.MoveNext() ? middlewares.Current : null;
+
+                void Next(IMiddlewareEvent ncall, Func<object, object> callback)
                 {
-                    IMiddleware middleware = middlewares.Current;
-
-                    void Next(IMiddlewareEvent ncall, Func<object, object> callback)
+                    nextInvoked = true;
+                    // the result can contain
+                    // - the non manipulated return value from an action
+                    // - the non manipulated abort value
+                    // - one of the above but manipulated through the callback function
+                    if (callback != null)
                     {
-                        nextInvoked = true;
-                        // the result can contain
-                        // - the non manipulated return value from an action
-                        // - the non manipulated abort value
-                        // - one of the above but manipulated through the callback function
-                        if (callback != null)
-                        {
-                            result = callback(RunMiddlewares(call) ?? result);
-                        }
-                        else
-                        {
-                            result = RunMiddlewares(call);
-                        }
+                        result = callback(RunMiddlewares(ncall) ?? result);
                     }
-
-                    void Abort(object value)
+                    else
                     {
-                        abortInvoked = true;
-                        // overwrite the result
-                        // can be manipulated through middlewares earlier in the queue using the callback fn
-                        result = value;
-                    }
-
-                    object InvokeHandler()
-                    {
-                        middleware.Handler(call, Next, Abort);
-                        var xnode = call.Tree.GetStateTreeNode();
-                        if (!nextInvoked && !abortInvoked)
-                        {
-                            Console.WriteLine($"Neither the next() nor the abort() callback within the middleware {middleware.Handler.ToString()} for the action: '{call.Name}' on the node: {xnode.Type.Name} was invoked.");
-                        }
-                        if (nextInvoked && abortInvoked)
-                        {
-                            Console.WriteLine($"The next() and abort() callback within the middleware {middleware.Handler.ToString()} for the action: '{call.Name}' on the node: ${node.Type.Name} were invoked.");
-                        }
-                        return result;
-                    }
-
-                    if (middleware?.Handler != null)
-                    {
-                        if (middleware.IncludeHooks)
-                        {
-                            return InvokeHandler();
-                        }
-                        else
-                        {
-                            if (Enum.TryParse(call.Name, out Hooks hook))
-                            {
-                                return RunMiddlewares(call);
-                            }
-                            else
-                            {
-                                return InvokeHandler();
-                            }
-                        }
+                        result = RunMiddlewares(ncall);
                     }
                 }
 
-                return Actions.RunInAction(call.Name, action, new object[] { call.Target }.Concat(call.Arguments).ToArray());
+                void Abort(object value)
+                {
+                    abortInvoked = true;
+                    // overwrite the result
+                    // can be manipulated through middlewares earlier in the queue using the callback fn
+                    result = value;
+                }
+
+                object InvokeHandler()
+                {
+                    middleware.Handler(call, Next, Abort);
+                    var xnode = call.Tree.GetStateTreeNode();
+                    if (!nextInvoked && !abortInvoked)
+                    {
+                        Console.WriteLine($"Neither the next() nor the abort() callback within the middleware {middleware.Handler.ToString()} for the action: '{call.Name}' on the node: {xnode.Type.Name} was invoked.");
+                    }
+                    if (nextInvoked && abortInvoked)
+                    {
+                        Console.WriteLine($"The next() and abort() callback within the middleware {middleware.Handler.ToString()} for the action: '{call.Name}' on the node: ${node.Type.Name} were invoked.");
+                    }
+                    return result;
+                }
+
+                if (middleware?.Handler != null)
+                {
+                    if (middleware.IncludeHooks)
+                    {
+                        return InvokeHandler();
+                    }
+                    else
+                    {
+                        if (Enum.TryParse(call.Name, out Hooks hook))
+                        {
+                            return RunMiddlewares(call);
+                        }
+                        else
+                        {
+                            return InvokeHandler();
+                        }
+                    }
+                } else
+                {
+                    return Actions.RunInAction(call.Name, action, new object[] { call.Target }.Concat(call.Arguments).ToArray());
+                }
             }
         }
 

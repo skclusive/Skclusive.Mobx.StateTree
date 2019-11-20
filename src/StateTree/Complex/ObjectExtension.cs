@@ -162,7 +162,7 @@ namespace Skclusive.Mobx.StateTree
 
         public static S GetSnapshot<S>(this object target, bool applyPostProcess = true)
         {
-            return (S)target.GetSnapshot();
+            return (S)target.GetSnapshot(applyPostProcess);
         }
 
         public static bool HasParent(this object target, int depth = 1)

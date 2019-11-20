@@ -151,6 +151,13 @@ namespace Skclusive.Mobx.StateTree
                 // TODO: FIXME, make sure the observable ref is used!
                 // (getAtom(node.storedValue, name) as any).reportObserved();
 
+                var depTreeNode = TypeUtils.GetAtom(node.StoredValue, property, true);
+
+                if (depTreeNode is IAtom atom)
+                {
+                    atom.ReportObserved();
+                }
+
                 SetPropertyValue(snapshot, property, GetChildNode(node, property).Snapshot);
             }
 

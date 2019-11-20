@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Skclusive.Mobx.StateTree;
 using Xunit;
 
 namespace ClientSide.Models
@@ -224,6 +226,103 @@ namespace ClientSide.Models
             store.Todos[0].Edit("Learn Blazor");
 
             Assert.Equal("Learn Blazor", store.Todos[0].Title);
+        }
+
+        [Fact]
+        public void TestOnAction()
+        {
+            var store = ModelTypes.TodoType.Create(new TodoSnapshot { Title = "Get coffee" });
+
+            var list = new List<string>();
+
+            store.OnAction((ISerializedActionCall call) =>
+            {
+                var snapshot = store.GetSnapshot<TodoSnapshot>();
+
+                list.Add(snapshot.Title);
+            });
+
+            store.Edit("Learn Blazor");
+
+            Assert.Single(list);
+
+            Assert.Equal("Learn Blazor", list[0]);
+        }
+
+        [Fact]
+        public void TestOnAction2()
+        {
+            var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = "ShowAll",
+
+                Todos = new ITodoSnapshot[]
+                {
+                   new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            var list = new List<int>();
+
+            store.OnAction((ISerializedActionCall call) =>
+            {
+                var snapshot = store.GetSnapshot<TodoStoreSnapshot>();
+
+                list.Add(snapshot.Todos.Length);
+            });
+
+            store.AddTodo("Learn Blazor");
+
+            Assert.Single(list);
+
+            Assert.Equal(2, list[0]);
+        }
+
+        [Fact]
+        public void TestOnAction3()
+        {
+            var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = "ShowAll",
+
+                Todos = new ITodoSnapshot[]
+                {
+                   new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            var list = new List<(int, string)>();
+
+            store.OnAction((ISerializedActionCall call) =>
+            {
+                var snapshot = store.GetSnapshot<TodoStoreSnapshot>();
+
+                list.Add((snapshot.Todos.Length, snapshot.Todos[0].Title));
+            });
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Single(list);
+
+            Assert.Equal(1, list[0].Item1);
+            Assert.Equal("Learn Blazor", list[0].Item2);
+        }
+
+        [Fact]
+        public void TestOnAction4()
+        {
+            var list = ModelTypes.TodoListType.Create(new ITodoSnapshot[]
+            {
+                new TodoSnapshot { Title = "Get coffee" }
+            });
+
+            list.Unprotected();
+
+            list.Insert(0, ModelTypes.TodoType.Create(new TodoSnapshot { Title = "Learn Blazor" }));
+
+            var snapshots = list.GetSnapshot<ITodoSnapshot[]>();
+
+            Assert.Equal(2, snapshots.Length);
         }
     }
 }

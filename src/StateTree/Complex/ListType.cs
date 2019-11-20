@@ -1,5 +1,6 @@
 ﻿using Skclusive.Mobx.Observable;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -135,9 +136,16 @@ namespace Skclusive.Mobx.StateTree
 
         protected override IValidationError[] IsValidSnapshot(object values, IContextEntry[] context)
         {
-            if (values is IEnumerable<object> enumerable)
+            if (values is IEnumerable enumerable)
             {
-                var errors = enumerable.Select((value, index) => SubType.Validate(value, StateTreeUtils.GetContextForPath(context, $"{index}", SubType)));
+                IList<object> list = new List<object>();
+
+                foreach(var item in enumerable)
+                {
+                    list.Add(item);
+                }
+
+                var errors = list.Select((value, index) => SubType.Validate(value, StateTreeUtils.GetContextForPath(context, $"{index}", SubType)));
 
                 return errors.Aggregate(new IValidationError[] { }, (acc, value) => acc.Concat(value).ToArray());
             }

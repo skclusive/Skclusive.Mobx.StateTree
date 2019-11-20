@@ -123,6 +123,11 @@ namespace Skclusive.Mobx.StateTree
             });
         }
 
+        private void InvalidateComputedPath()
+        {
+            _Path.TrackAndCompute();
+        }
+
         public string IdentifierAttribute { set; get; }
 
         public bool AutoUnbox { protected set; get; }
@@ -242,7 +247,16 @@ namespace Skclusive.Mobx.StateTree
 
         public object Value { get => _Value.Value; }
 
-        public object Snapshot { get => _Snapshot.Value; }
+        public object Snapshot
+        {
+            get
+            {
+                // TODO: added to fix bug. need to investigate
+                _Snapshot.TrackAndCompute();
+
+               return _Snapshot.Value;
+            }
+        }
 
         public string Identifier { get => IdentifierAttribute ?? (string)FromStored(IdentifierAttribute); }
 
@@ -315,6 +329,8 @@ namespace Skclusive.Mobx.StateTree
 
                     FireHook("afterAttach");
                 }
+
+                InvalidateComputedPath();
             }
         }
 
@@ -464,6 +480,8 @@ namespace Skclusive.Mobx.StateTree
                 Subpath = "";
 
                 State = NodeLifeCycle.FINALIZED;
+
+                InvalidateComputedPath();
             }
         }
 
@@ -522,6 +540,8 @@ namespace Skclusive.Mobx.StateTree
             DisposerSubscribers.Clear();
 
             State = NodeLifeCycle.DEAD;
+
+            InvalidateComputedPath();
         }
 
         public IDisposable OnSnapshot(Action<object> onChange)

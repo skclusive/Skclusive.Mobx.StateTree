@@ -13,8 +13,6 @@ namespace Skclusive.Mobx.StateTree
                 throw new InvalidOperationException("Can not listen for action on Non State Tree Node");
             }
 
-            var node = target.GetStateTreeNode();
-
             void FireListener(IMiddlewareEvent call)
             {
                 if (call.Type == MiddlewareEventType.Action && call.Id == call.RootId)
@@ -25,7 +23,7 @@ namespace Skclusive.Mobx.StateTree
                     {
                         Name = call.Name,
 
-                        Path = StateTreeUtils.GetRelativePathBetweenNodes(node, source),
+                        Path = StateTreeUtils.GetRelativePathBetweenNodes(target.GetStateTreeNode(), source),
 
                         //TODO: serialize arguments
                         Arguments = call.Arguments.ToArray()
