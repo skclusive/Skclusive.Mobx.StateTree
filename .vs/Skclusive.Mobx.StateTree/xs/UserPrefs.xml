@@ -1,0 +1,45 @@
+﻿<Properties StartupConfiguration="{4963BE55-EDF6-414B-BF6E-F830A8513DF9}|Default">
+  <MonoDevelop.Ide.ItemProperties.test.StateTree.Tests PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="src/StateTree/Action/ActionExtension.cs">
+    <Files>
+      <File FileName="src/StateTree/Action/ActionExtension.cs" Line="21" Column="1" />
+      <File FileName="test/StateTree.Tests/Models/TestTodoStore.cs" Line="36" Column="1" />
+      <File FileName="src/StateTree/Node/ObjectNode.cs" Line="374" Column="27" />
+      <File FileName="src/StateTree/Complex/ListType.cs" Line="175" Column="1" />
+      <File FileName="../Skclusive.Mobx.Observable/src/Observable/Concretes/ObservableList.cs" Line="312" Column="1" />
+      <File FileName="test/StateTree.Tests/Models/Todo.cs" Line="62" Column="1" />
+      <File FileName="../Skclusive.Mobx.Observable/src/Observable/Concretes/ObservableObject.cs" Line="183" Column="1" />
+      <File FileName="../Skclusive.Mobx.Observable/src/Observable/Concretes/ObservableAction.cs" Line="40" Column="1" />
+      <File FileName="src/StateTree/Action/StateTreeAction.cs" Line="371" Column="1" />
+      <File FileName="test/StateTree.Tests/Models/ModelTypes.cs" Line="45" Column="5" />
+      <File FileName="src/StateTree/StateTreeUtils.cs" Line="60" Column="56" />
+      <File FileName="src/StateTree/Middleware/IMiddlewareEvent.cs" Line="20" Column="1" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="Skclusive.Mobx.StateTree" expanded="True" selected="True">
+            <Node name="test" expanded="True" />
+          </Node>
+        </State>
+      </Pad>
+      <Pad Id="MonoDevelop.UnitTesting.TestPad">
+        <State name="__root__">
+          <Node name="Skclusive.Mobx.StateTree" expanded="True" selected="True" />
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore>
+      <Breakpoint file="/Users/senthilnathansk/Desktop/github/Skclusive.Mobx.StateTree/test/StateTree.Tests/Models/TestTodoStore.cs" relfile="test/StateTree.Tests/Models/TestTodoStore.cs" line="274" column="1" />
+      <Breakpoint file="/Users/senthilnathansk/Desktop/github/Skclusive.Mobx.Observable/src/Observable/Concretes/ObservableList.cs" line="116" column="1" />
+      <Breakpoint file="/Users/senthilnathansk/Desktop/github/Skclusive.Mobx.Observable/src/Observable/Concretes/ObservableList.cs" line="312" column="1" />
+      <Breakpoint file="/Users/senthilnathansk/Desktop/github/Skclusive.Mobx.StateTree/src/StateTree/Complex/ListType.cs" relfile="src/StateTree/Complex/ListType.cs" line="175" column="1" />
+      <Breakpoint file="/Users/senthilnathansk/Desktop/github/Skclusive.Mobx.StateTree/test/StateTree.Tests/Models/TestTodoStore.cs" relfile="test/StateTree.Tests/Models/TestTodoStore.cs" line="36" column="1" />
+    </BreakpointStore>
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>
