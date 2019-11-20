@@ -1,6 +1,7 @@
 using Skclusive.Mobx.Observable;
 using Skclusive.Mobx.StateTree;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ClientSide.Models
 {
@@ -41,8 +42,17 @@ namespace ClientSide.Models
         string Filter { set; get; }
     }
 
-    internal class TodoStoreSnapshot : ITodoStoreSnapshot
+    public class TodoStoreSnapshot : ITodoStoreSnapshot
     {
+        public TodoStoreSnapshot()
+        {
+        }
+
+        public TodoStoreSnapshot(TodoSnapshot[] todos)
+        {
+            Todos = todos;
+        }
+
         public string Filter { set; get; }
 
         public ITodoSnapshot[] Todos { set; get; }

@@ -1,3 +1,5 @@
+using System;
+using Newtonsoft.Json;
 using Skclusive.Mobx.Observable;
 using Skclusive.Mobx.StateTree;
 
@@ -25,7 +27,7 @@ namespace ClientSide.Models
     {
     }
 
-    internal class TodoSnapshot : ITodoSnapshot
+    public class TodoSnapshot : ITodoSnapshot
     {
         public string Title { set; get; }
 
@@ -65,6 +67,24 @@ namespace ClientSide.Models
         public void Edit(string title)
         {
             (Target as dynamic).Edit(title);
+        }
+    }
+
+    public class TodoSnapshotConverter : JsonConverter
+    {
+        public override bool CanConvert(Type objectType)
+        {
+            return (objectType == typeof(ITodoSnapshot));
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            return serializer.Deserialize(reader, typeof(TodoSnapshot));
+        }
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            serializer.Serialize(writer, value, typeof(TodoSnapshot));
         }
     }
 

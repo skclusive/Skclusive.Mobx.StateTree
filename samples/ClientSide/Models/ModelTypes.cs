@@ -41,7 +41,10 @@ namespace ClientSide.Models
                                o.Todos.Remove(completed);
                        })
                        .Action<string>((o) => o.SetFilter(null), (o, filter) => o.Filter = filter)
-                       .Action<string>((o) => o.AddTodo(null), (o, title) => o.Todos.Insert(0, TodoType.Create(new TodoSnapshot { Title = title })))
-                       .Action<ITodo>((o) => o.Remove(null), (o, x) => x.Destroy());
+                       .Action<string>((o) => o.AddTodo(null), (o, title) =>
+                       {
+                           o.Todos.Insert(0, TodoType.Create(new TodoSnapshot { Title = title }));
+                       })
+                       .Action<ITodo>((o) => o.Remove(null), (o, x) => o.Todos.Remove(x));
     }
 }
