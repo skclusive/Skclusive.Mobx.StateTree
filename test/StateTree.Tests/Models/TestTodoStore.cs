@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Skclusive.Mobx.StateTree;
 using Xunit;
 
-namespace ClientSide.Models
+namespace BlazorTodo.Models
 {
     public class TestTodoStore
     {

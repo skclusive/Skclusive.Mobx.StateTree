@@ -1,7 +1,7 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientSide", "ClientSide.csproj", "{24D6C52C-9A49-4D43-A32E-7F488E926695}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorTodo", "BlazorTodo.csproj", "{24D6C52C-9A49-4D43-A32E-7F488E926695}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

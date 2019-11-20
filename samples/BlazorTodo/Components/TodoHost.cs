@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using ClientSide.Models;
+using BlazorTodo.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
 using Skclusive.Core.Component;
@@ -9,7 +9,7 @@ using Skclusive.Mobx.StateTree;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
-namespace ClientSide.Components
+namespace BlazorTodo.Components
 {
     public class TodoHostComponent : DisposableComponentBase
     {

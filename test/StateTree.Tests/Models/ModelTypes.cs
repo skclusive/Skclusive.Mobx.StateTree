@@ -4,7 +4,7 @@ using System.Linq;
 using Skclusive.Mobx.Observable;
 using Skclusive.Mobx.StateTree;
 
-namespace ClientSide.Models
+namespace BlazorTodo.Models
 {
     public class ModelTypes
     {

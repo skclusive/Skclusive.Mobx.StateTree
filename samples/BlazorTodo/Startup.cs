@@ -1,10 +1,10 @@
-using ClientSide.Models;
+using BlazorTodo.Models;
 using Microsoft.AspNetCore.Components.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Skclusive.Script.DevTools;
 
-namespace ClientSide
+namespace BlazorTodo
 {
     public class Startup
     {

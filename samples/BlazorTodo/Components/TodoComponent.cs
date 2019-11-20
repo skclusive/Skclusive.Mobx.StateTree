@@ -1,8 +1,8 @@
-using ClientSide.Models;
+using BlazorTodo.Models;
 using Microsoft.AspNetCore.Components;
 using Skclusive.Mobx.Component;
 
-namespace ClientSide.Components
+namespace BlazorTodo.Components
 {
     public class TodoComponent : ObservableComponentBase
     {

@@ -3,7 +3,7 @@ using Skclusive.Mobx.StateTree;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ClientSide.Models
+namespace BlazorTodo.Models
 {
     #region ITodoStore
 
