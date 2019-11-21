@@ -13,7 +13,6 @@
     <PackageTags>blazor mobx mobx-state-tree state</PackageTags>
     <PackageProjectUrl>https://github.com/skclusive/Skclusive.Mobx.StateTree</PackageProjectUrl>
     <RepositoryUrl>https://github.com/skclusive/Skclusive.Mobx.StateTree</RepositoryUrl>
-    <PackageLicenseFile>LICENCE</PackageLicenseFile>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.6.0" />
