@@ -11,7 +11,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -21,7 +21,7 @@ namespace BlazorTodo.Models
 
             Assert.NotNull(store);
 
-            Assert.Equal("ShowAll", store.Filter);
+            Assert.Equal(Filter.All, store.Filter);
 
             Assert.Equal("Get coffee", store.Todos[0].Title);
 
@@ -45,7 +45,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -67,15 +67,15 @@ namespace BlazorTodo.Models
 
             Assert.Equal(2, store.FilteredTodos.Count);
 
-            store.SetFilter("ShowActive");
+            store.SetFilter(Filter.Active);
 
-            Assert.Equal("ShowActive", store.Filter);
+            Assert.Equal(Filter.Active, store.Filter);
 
             Assert.Equal(0, store.FilteredTodos.Count);
 
-            store.SetFilter("ShowCompleted");
+            store.SetFilter(Filter.Completed);
 
-            Assert.Equal("ShowCompleted", store.Filter);
+            Assert.Equal(Filter.Completed, store.Filter);
 
             Assert.Equal(2, store.FilteredTodos.Count);
 
@@ -89,7 +89,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -107,9 +107,9 @@ namespace BlazorTodo.Models
 
             store.CompleteAll();
 
-            store.SetFilter("ShowCompleted");
+            store.SetFilter(Filter.Completed);
 
-            Assert.Equal("ShowCompleted", store.Filter);
+            Assert.Equal(Filter.Completed, store.Filter);
 
             Assert.Equal(2, store.FilteredTodos.Count);
 
@@ -123,7 +123,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -161,7 +161,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -185,7 +185,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -211,7 +211,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -254,7 +254,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {
@@ -283,7 +283,7 @@ namespace BlazorTodo.Models
         {
             var store = ModelTypes.StoreType.Create(new TodoStoreSnapshot
             {
-                Filter = "ShowAll",
+                Filter = Filter.All,
 
                 Todos = new ITodoSnapshot[]
                 {

@@ -140,7 +140,7 @@ namespace Skclusive.Mobx.StateTree
 
         public static ISimpleType<T> Literal<T>(T value)
         {
-            if (!(value is string || value.GetType().IsPrimitive))
+            if (!(value is string || value.GetType().IsPrimitive || value.GetType().IsEnum))
             {
                 throw new InvalidOperationException("Literal types can be built only on top of primitives");
             }
@@ -163,11 +163,11 @@ namespace Skclusive.Mobx.StateTree
             return new IdentifierType<T>(type);
         }
 
-        public static IType<string, string> Enumeration(string name, params string[] enums)
+        public static IType<T, T> Enumeration<T>(string name, params T[] enums)
         {
-            var options = enums.Select(enumx => Literal<string>(enumx)).ToArray();
+            var options = enums.Select(enumx => Literal<T>(enumx)).ToArray();
 
-            return Union<string, string>(name, options);
+            return Union<T, T>(name, options);
         }
 
         public static IType<S, T> Custom<S, T>(ICustomTypeOptions<S, T> options)
