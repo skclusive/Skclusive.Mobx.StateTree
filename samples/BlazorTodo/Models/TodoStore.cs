@@ -5,11 +5,22 @@ using System.Linq;
 
 namespace BlazorTodo.Models
 {
+    public enum Filter : int
+    {
+        None = 0,
+
+        Active = 1,
+
+        Completed = 2,
+
+        All = 3
+    }
+
     #region ITodoStore
 
     public interface ITodoStoreSnapshot
     {
-        string Filter { set; get; }
+        Filter Filter { set; get; }
 
         ITodoSnapshot[] Todos { set; get; }
     }
@@ -18,7 +29,7 @@ namespace BlazorTodo.Models
     {
         void AddTodo(string title);
 
-        void SetFilter(string filter);
+        void SetFilter(Filter filter);
 
         void Remove(ITodo todo);
 
@@ -39,7 +50,7 @@ namespace BlazorTodo.Models
 
         int CompletedCount { get; }
 
-        string Filter { set; get; }
+        Filter Filter { set; get; }
     }
 
     public class TodoStoreSnapshot : ITodoStoreSnapshot
@@ -53,7 +64,7 @@ namespace BlazorTodo.Models
             Todos = todos;
         }
 
-        public string Filter { set; get; }
+        public Filter Filter { set; get; }
 
         public ITodoSnapshot[] Todos { set; get; }
     }
@@ -66,9 +77,9 @@ namespace BlazorTodo.Models
         {
         }
 
-        public string Filter
+        public Filter Filter
         {
-            get => Read<string>(nameof(Filter));
+            get => Read<Filter>(nameof(Filter));
             set => Write(nameof(Filter), value);
         }
 
@@ -96,7 +107,7 @@ namespace BlazorTodo.Models
             (Target as dynamic).Remove(todo);
         }
 
-        public void SetFilter(string filter)
+        public void SetFilter(Filter filter)
         {
             (Target as dynamic).SetFilter(filter);
         }

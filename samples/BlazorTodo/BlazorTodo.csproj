@@ -14,9 +14,9 @@
 
   <ItemGroup>
     <PackageReference Include="Skclusive.Mobx.Observable" Version="1.0.2" />
-    <PackageReference Include="Skclusive.Mobx.StateTree" Version="1.0.2" />
+    <PackageReference Include="Skclusive.Mobx.StateTree" Version="1.0.3" />
     <PackageReference Include="Skclusive.Mobx.Component" Version="1.0.4" />
-    <PackageReference Include="Skclusive.Script.DevTools" Version="1.0.1" />
+    <PackageReference Include="Skclusive.Script.DevTools" Version="1.0.2" />
   </ItemGroup>
 
 </Project>
