@@ -126,11 +126,21 @@ store.Todos[0].Toggle();
 // prints: `{ Todos: [{ Title: "Get coffee", Done: true }]}`
 ```
 
-## TodoMVC Sample
+# Samples Projects
 
-The TodoMVC sample project has been hosted [here](https://skclusive.github.io/Skclusive.Mobx.StateTree/).
+Sample projects using Skclusive.Mobx.StateTree are availabe in [Skclusive.Blazor.Samples](https://github.com/skclusive/Skclusive.Blazor.Samples) repository.
 
-![Blazor TodoMVC App](images/todo-app.gif)
+## TodoApp Sample
+
+The Blazor TodoApp sample project has been hosted [here](https://skclusive.github.io/Skclusive.Blazor.Samples/TodoApp/), which integrates with redux devtool.
+
+![Blazor TodoApp](https://skclusive.github.io/Skclusive.Blazor.Samples/TodoApp/images/todo-app.gif)
+
+## FlightFinder Sample
+
+The Blazor FlightFinder sample project has been hosted [here](https://skclusive.github.io/Skclusive.Blazor.Samples/FlightFinder/), which integrates with redux devtool.
+
+![Blazor FlightFinder](https://skclusive.github.io/Skclusive.Blazor.Samples/FlightFinder/images/flight-finder.gif)
 
 ### Installation
 
