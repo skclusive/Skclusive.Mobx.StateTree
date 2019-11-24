@@ -1,10 +1,25 @@
+using ImpromptuInterface;
 using Newtonsoft.Json;
 using Skclusive.Mobx.Observable;
+using System;
 using System.Collections.Generic;
 using Xunit;
 
 namespace Skclusive.Mobx.StateTree.Tests
 {
+    public static class ObservableExtension
+    {
+        public static TInterface ActAs<TInterface>(this IObservableObject observable, params Type[] otherInterfaces) where TInterface : class
+        {
+            return observable.ActLike<TInterface>(otherInterfaces);
+        }
+
+        public static TInterface ActAsProxy<TInterface>(this IObservableObject observable) where TInterface : class
+        {
+            return observable.ActAs<TInterface>(typeof(IObservableObject<TInterface, INode>));
+        }
+    }
+
     #region IOrder
 
     public interface IOrder
@@ -22,51 +37,13 @@ namespace Skclusive.Mobx.StateTree.Tests
         double DecrementPrice(double price);
     }
 
-    internal class OrderProxy : ObservableProxy<IOrder, INode>, IOrder
-    {
-        public override IOrder Proxy => this;
-
-        public OrderProxy(IObservableObject<IOrder, INode> target) : base(target)
-        {
-        }
-
-        public double Vat
-        {
-            get => Read<double>(nameof(Vat));
-            set => Write(nameof(Vat), value);
-        }
-
-        public double Price
-        {
-            get => Read<double>(nameof(Price));
-            set => Write(nameof(Price), value);
-        }
-
-        public double PriceWithVat => Read<double>(nameof(PriceWithVat));
-
-        public double IncrementPrice(double price)
-        {
-            return (Target as dynamic).IncrementPrice(price);
-        }
-
-        public double DecrementPrice(double price)
-        {
-            return (Target as dynamic).DecrementPrice(price);
-        }
-
-        public void UpdateVat(double vat)
-        {
-            (Target as dynamic).UpdateVat(vat);
-        }
-    }
-
     #endregion
 
     public class TestOrder
     {
         private static IObjectType<IOrder> Order = Types
                 .Object<IOrder>("Order")
-                .Proxy(x => new OrderProxy(x))
+                .Proxy(x => x.ActAsProxy<IOrder>())
                 .Mutable(o => o.Price, Types.Double)
                 .Mutable(o => o.Vat, Types.Double)
                 .View(o => o.PriceWithVat, Types.Double, (o) => o.Price * (1 + o.Vat))
