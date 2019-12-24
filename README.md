@@ -134,13 +134,13 @@ Sample projects using Skclusive.Mobx.StateTree are availabe in [Skclusive.Blazor
 
 The Blazor TodoApp sample project has been hosted [here](https://skclusive.github.io/Skclusive.Blazor.Samples/TodoApp/), which integrates with redux devtool.
 
-![Blazor TodoApp](https://skclusive.github.io/Skclusive.Blazor.Samples/TodoApp/images/todo-app.gif)
+![Blazor TodoApp](https://github.com/skclusive/Skclusive.Blazor.Samples/raw/master/images/todo-app.gif)
 
 ## FlightFinder Sample
 
 The Blazor FlightFinder sample project has been hosted [here](https://skclusive.github.io/Skclusive.Blazor.Samples/FlightFinder/), which integrates with redux devtool.
 
-![Blazor FlightFinder](https://skclusive.github.io/Skclusive.Blazor.Samples/FlightFinder/images/flight-finder.gif)
+![Blazor FlightFinder](https://skclusive.github.io/Skclusive.Blazor.Samples/images/flight-finder.gif)
 
 ### Installation
 
