@@ -140,7 +140,7 @@ The Blazor TodoApp sample project has been hosted [here](https://skclusive.githu
 
 The Blazor FlightFinder sample project has been hosted [here](https://skclusive.github.io/Skclusive.Blazor.Samples/FlightFinder/), which integrates with redux devtool.
 
-![Blazor FlightFinder](https://skclusive.github.io/Skclusive.Blazor.Samples/images/flight-finder.gif)
+![Blazor FlightFinder](https://github.com/skclusive/Skclusive.Blazor.Samples/raw/master/images/images/flight-finder.gif)
 
 ### Installation
 
