@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <VersionPrefix>1.0.4</VersionPrefix>
+    <VersionPrefix>2.0.0</VersionPrefix>
     <VersionSuffix>$(VersionSuffix)</VersionSuffix>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>Skclusive.Mobx.StateTree</AssemblyName>
@@ -19,6 +19,6 @@
     <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Skclusive.Mobx.Observable" Version="1.0.4" />
+    <PackageReference Include="Skclusive.Mobx.Observable" Version="2.0.0" />
   </ItemGroup>
 </Project>
