@@ -153,6 +153,11 @@ namespace Skclusive.Mobx.StateTree
             return new LateType<S, T>(name, definition);
         }
 
+        public static IObjectType<S, T> Late<S, T>(string name, Func<IObjectType<S, T>> definition)
+        {
+            return new LateObjectType<S, T>(name, definition);
+        }
+
         public static IType<string, string> Identifier()
         {
             return new IdentifierType<string>(Types.String);
