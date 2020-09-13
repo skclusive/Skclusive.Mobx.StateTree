@@ -18,10 +18,10 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
   </ItemGroup>
-  <!-- <ItemGroup>
-    <PackageReference Include="Skclusive.Mobx.Observable" Version="2.0.0" />
-  </ItemGroup> -->
   <ItemGroup>
-    <ProjectReference Include="..\..\Skclusive.Mobx.Observable\src\Observable.csproj" />
+    <PackageReference Include="Skclusive.Mobx.Observable" Version="3.0.4-preview1" />
   </ItemGroup>
+  <!-- <ItemGroup>
+    <ProjectReference Include="..\..\Skclusive.Mobx.Observable\src\Observable.csproj" />
+  </ItemGroup> -->
 </Project>
