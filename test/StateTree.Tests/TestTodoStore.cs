@@ -140,16 +140,15 @@ namespace Skclusive.Mobx.StateTree.Tests
         {
             var store = StoreType.Create(new StoreSnapshot { Todo = new TodoSnapshot { Title = "sk" }, Todos = new ITodoProps[] { new TodoSnapshot { Title = "Naguvan" } } });
 
-            store.Unprotected();
-
             Assert.NotNull(store);
+
+            store.Unprotected();
 
             var todo = store.Todo;
 
             todo.MakeUpper();
 
             Assert.Equal("SK", todo.Title);
-
 
             var snapshots = new List<IStoreProps>();
 

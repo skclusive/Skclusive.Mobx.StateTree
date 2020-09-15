@@ -1,5 +1,6 @@
 ﻿using Skclusive.Mobx.Observable;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -258,13 +259,20 @@ namespace Skclusive.Mobx.StateTree
             }
         }
 
-        public string Identifier { get => IdentifierAttribute ?? (string)FromStored(IdentifierAttribute); }
+        public string Identifier => FromStored(IdentifierAttribute) as string;
 
         private object FromStored(string attribute)
         {
-            if (StoredValue is IDictionary<object, object>)
+            if (StoredValue is IDictionary dictionary)
             {
-                return (StoredValue as IDictionary<object, object>)[attribute];
+                return dictionary[attribute];
+            }
+            else if (StoredValue is IObservableObject observableObject)
+            {
+                if (observableObject.TryRead(attribute, out object value))
+                {
+                    return value;
+                }
             }
             return null;
         }

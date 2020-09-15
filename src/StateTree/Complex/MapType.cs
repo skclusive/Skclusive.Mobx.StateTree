@@ -46,7 +46,7 @@ namespace Skclusive.Mobx.StateTree
 
         private void FinalizeNewInstance(ObjectNode node, object snapshot)
         {
-            var objNode = node as ObjectNode;
+            var objNode = node ;
 
             var instance = objNode.StoredValue as IObservableMap<string, INode, T>;
 
@@ -108,7 +108,7 @@ namespace Skclusive.Mobx.StateTree
 
         protected override IValidationError[] IsValidSnapshot(object values, IContextEntry[] context)
         {
-            if (values is IDictionary<object, object> dictionary)
+            if (values is IDictionary<string, S> dictionary)
             {
                 var errors = dictionary.Keys.Select(key => SubType.Validate(dictionary[key], StateTreeUtils.GetContextForPath(context, $"{key}", SubType)));
 
@@ -193,6 +193,7 @@ namespace Skclusive.Mobx.StateTree
                     throw new InvalidOperationException($"The objects in a map should all have the same identifier attribute, expected '{IdentifierAttribute}', but child of type '{objectNode.Type.Name}' declared attribute '{objectNode.IdentifierAttribute}' as identifier");
                 }
 
+                // TODO: Identify and Fix
                 if (IdentifierMode == MapIdentifierMode.Yes)
                 {
                     string identifier = objectNode.Identifier;
@@ -232,7 +233,7 @@ namespace Skclusive.Mobx.StateTree
                     break;
                 case ChangeType.ADD:
                     {
-                        StateTreeUtils.Typecheck(SubType, change.NewValue);
+                        StateTreeUtils.Typecheck(SubType, change.NewValue.StoredValue);
 
                         change.NewValue = SubType.Instantiate(node, change.Name, Node.Environment, change.NewValue.StoredValue);
 
