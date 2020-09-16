@@ -1,144 +1,336 @@
-using Skclusive.Mobx.Observable;
 using System;
 using System.Collections.Generic;
+using Skclusive.Mobx.StateTree;
 using Xunit;
+using static Skclusive.Mobx.StateTree.Tests.TestTypes;
 
 namespace Skclusive.Mobx.StateTree.Tests
 {
-    #region ITodo
-
-    public interface ITodoProps
-    {
-        string Title { set; get; }
-
-        bool Done { set; get; }
-    }
-
-    public interface ITodoActions
-    {
-        void MakeUpper();
-
-        void Toggle();
-    }
-
-    public interface ITodo : ITodoProps, ITodoActions
-    {
-    }
-
-    internal class TodoSnapshot : ITodoProps
-    {
-        public string Title { set; get; }
-
-        public bool Done { set; get; }
-    }
-
-    internal class TodoProxy : ObservableProxy<ITodo, INode>, ITodo
-    {
-        public override ITodo Proxy => this;
-
-        public TodoProxy(IObservableObject<ITodo, INode> target) : base(target)
-        {
-        }
-
-        public string Title
-        {
-            get => Read<string>(nameof(Title));
-            set => Write(nameof(Title), value);
-        }
-
-        public bool Done
-        {
-            get => Read<bool>(nameof(Done));
-            set => Write(nameof(Done), value);
-        }
-
-        public void Toggle()
-        {
-            (Target as dynamic).Toggle();
-        }
-
-        public void MakeUpper()
-        {
-            (Target as dynamic).MakeUpper();
-        }
-    }
-
-    #endregion
-
-    #region IStore
-
-    public interface IStoreProps
-    {
-        ITodoProps Todo { set; get; }
-
-        ITodoProps[] Todos { set; get; }
-    }
-
-    public interface IStoreActions
-    {
-    }
-
-    public interface IStore : IStoreActions
-    {
-        ITodo Todo { set; get; }
-
-        IList<ITodo> Todos { set; get; }
-    }
-
-    internal class StoreSnapshot : IStoreProps
-    {
-        public ITodoProps Todo { set; get; }
-
-        public ITodoProps[] Todos { set; get; }
-    }
-
-    internal class StoreProxy : ObservableProxy<IStore, INode>, IStore
-    {
-        public override IStore Proxy => this;
-
-        public StoreProxy(IObservableObject<IStore, INode> target) : base(target)
-        {
-        }
-
-        public ITodo Todo
-        {
-            get => Read<ITodo>(nameof(Todo));
-            set => Write(nameof(Todo), value);
-        }
-
-        public IList<ITodo> Todos
-        {
-            get => Read<IList<ITodo>>(nameof(Todos));
-            set => Write(nameof(Todos), value);
-        }
-    }
-
-    #endregion
-
     public class TestTodoStore
     {
-        private static IObjectType<ITodoProps, ITodo> TodoType = Types.
-                        Object<ITodoProps, ITodo>("Todo")
-                       .Proxy(x => new TodoProxy(x))
-                       .Snapshot(() => new TodoSnapshot())
-                       .Mutable(o => o.Title, Types.String)
-                       .Mutable(o => o.Done, Types.Boolean)
-                       .Action(o => o.MakeUpper(), (o) => o.Title = o.Title?.ToUpper())
-                       .Action(o => o.Toggle(), (o) => o.Done = !o.Done);
+        [Fact]
+        public void TestStore()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
 
-        private static IObjectType<IStoreProps, IStore> StoreType = Types.
-                        Object<IStoreProps, IStore>("Store")
-                       .Proxy(x => new StoreProxy(x))
-                       .Snapshot(() => new StoreSnapshot())
-                       .Mutable(o => o.Todo, Types.Maybe(TodoType))
-                       .Mutable(o => o.Todos, Types.List(TodoType));
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
 
-        #region Computed Tests
+            Assert.NotNull(store);
+
+            Assert.Equal(Filter.All, store.Filter);
+
+            Assert.Equal("Get coffee", store.Todos[0].Title);
+
+            store.Todos[0].Edit("Get Filter Coffee");
+
+            Assert.Equal("Get Filter Coffee", store.Todos[0].Title);
+
+            store.Todos[0].Toggle();
+
+            Assert.True(store.Todos[0].Done);
+
+            store.Todos[0].Remove();
+
+            Assert.Empty(store.Todos);
+
+            Assert.Equal(0, store.TotalCount);
+        }
+
+        [Fact]
+        public void TestTodoCounts()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee", Done = true },
+
+                    new TodoSnapshot { Title = "Learn Blazor" }
+                }
+            });
+
+            Assert.Equal(2, store.FilteredTodos.Count);
+
+            Assert.Equal(2, store.TotalCount);
+
+            Assert.Equal(1, store.ActiveCount);
+
+            Assert.Equal(1, store.CompletedCount);
+
+            store.Todos[1].Toggle();
+
+            Assert.Equal(2, store.FilteredTodos.Count);
+
+            store.SetFilter(Filter.Active);
+
+            Assert.Equal(Filter.Active, store.Filter);
+
+            Assert.Equal(0, store.FilteredTodos.Count);
+
+            store.SetFilter(Filter.Completed);
+
+            Assert.Equal(Filter.Completed, store.Filter);
+
+            Assert.Equal(2, store.FilteredTodos.Count);
+
+            Assert.Equal(0, store.ActiveCount);
+
+            Assert.Equal(2, store.CompletedCount);
+        }
+
+        [Fact]
+        public void TestTodoCompleteAll()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" },
+
+                    new TodoSnapshot { Title = "Learn Blazor" }
+                }
+            });
+
+            Assert.Equal(2, store.FilteredTodos.Count);
+
+            Assert.Equal(2, store.ActiveCount);
+
+            Assert.Equal(0, store.CompletedCount);
+
+            store.CompleteAll();
+
+            store.SetFilter(Filter.Completed);
+
+            Assert.Equal(Filter.Completed, store.Filter);
+
+            Assert.Equal(2, store.FilteredTodos.Count);
+
+            Assert.Equal(0, store.ActiveCount);
+
+            Assert.Equal(2, store.CompletedCount);
+        }
+
+        [Fact]
+        public void TestTodoClearCompleted()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" },
+
+                    new TodoSnapshot { Title = "Learn Blazor" }
+                }
+            });
+
+            Assert.Equal(2, store.FilteredTodos.Count);
+
+            Assert.Equal(2, store.ActiveCount);
+
+            Assert.Equal(0, store.CompletedCount);
+
+            store.Todos[0].Toggle();
+
+            Assert.Equal(1, store.ActiveCount);
+
+            Assert.Equal(1, store.CompletedCount);
+
+            store.ClearCompleted();
+
+            Assert.Equal(1, store.FilteredTodos.Count);
+
+            Assert.Equal(1, store.ActiveCount);
+
+            Assert.Equal(0, store.CompletedCount);
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+        }
+
+        [Fact]
+        public void TestAddTodo()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            Assert.Equal(1, store.TotalCount);
+
+            store.AddTodo("Learn Blazor");
+
+            Assert.Equal(2, store.TotalCount);
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+
+            Assert.Equal("Get coffee", store.Todos[1].Title);
+        }
+
+        [Fact]
+        public void TestEditTodo()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            Assert.Equal("Get coffee", store.Todos[0].Title);
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Equal(1, store.TotalCount);
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+        }
+
+        [Fact]
+        public void TestNoEditTodo()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                    new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            Assert.Equal("Get coffee", store.Todos[0].Title);
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Equal("Learn Blazor", store.Todos[0].Title);
+        }
+
+        [Fact]
+        public void TestOnAction()
+        {
+            var store = TodoType.Create(new TodoSnapshot { Title = "Get coffee" });
+
+            var list = new List<string>();
+
+            store.OnAction((ISerializedActionCall call) =>
+            {
+                var snapshot = store.GetSnapshot<TodoSnapshot>();
+
+                list.Add(snapshot.Title);
+            });
+
+            store.Edit("Learn Blazor");
+
+            Assert.Single(list);
+
+            Assert.Equal("Learn Blazor", list[0]);
+        }
+
+        [Fact]
+        public void TestOnAction2()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                   new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            var list = new List<int>();
+
+            store.OnAction((ISerializedActionCall call) =>
+            {
+                var snapshot = store.GetSnapshot<TodoStoreSnapshot>();
+
+                list.Add(snapshot.Todos.Length);
+            });
+
+            store.AddTodo("Learn Blazor");
+
+            Assert.Single(list);
+
+            Assert.Equal(2, list[0]);
+        }
+
+        [Fact]
+        public void TestOnAction3()
+        {
+            var store = TodoStoreType.Create(new TodoStoreSnapshot
+            {
+                Filter = Filter.All,
+
+                Todos = new ITodoSnapshot[]
+                {
+                   new TodoSnapshot { Title = "Get coffee" }
+                }
+            });
+
+            var list = new List<(int, string)>();
+
+            store.OnAction((ISerializedActionCall call) =>
+            {
+                var snapshot = store.GetSnapshot<TodoStoreSnapshot>();
+
+                list.Add((snapshot.Todos.Length, snapshot.Todos[0].Title));
+            });
+
+            store.Todos[0].Edit("Learn Blazor");
+
+            Assert.Single(list);
+
+            Assert.Equal(1, list[0].Item1);
+            Assert.Equal("Learn Blazor", list[0].Item2);
+        }
+
+        [Fact]
+        public void TestOnAction4()
+        {
+            var list = TodoListType.Create(new ITodoSnapshot[]
+            {
+                new TodoSnapshot { Title = "Get coffee" }
+            });
+
+            list.Unprotected();
+
+            list.Insert(0, TodoType.Create(new TodoSnapshot { Title = "Learn Blazor" }));
+
+            var snapshots = list.GetSnapshot<ITodoSnapshot[]>();
+
+            Assert.Equal(2, snapshots.Length);
+        }
 
         [Fact]
         public void TestDeadObjectAccessError()
         {
-            var store = StoreType.Create(new StoreSnapshot { Todo = new TodoSnapshot { Title = "sk" }, Todos = new ITodoProps[] { new TodoSnapshot { Title = "Naguvan" } } });
+            var store = TodoStoreType.Create(new TodoStoreSnapshot { Todo = new TodoSnapshot { Title = "sk" }, Todos = new ITodoSnapshot[] { new TodoSnapshot { Title = "Naguvan" } } });
 
             Assert.NotNull(store);
 
@@ -150,9 +342,9 @@ namespace Skclusive.Mobx.StateTree.Tests
 
             Assert.Equal("SK", todo.Title);
 
-            var snapshots = new List<IStoreProps>();
+            var snapshots = new List<ITodoStoreSnapshot>();
 
-            store.OnSnapshot<IStoreProps>(snapshot => snapshots.Add(snapshot));
+            store.OnSnapshot<ITodoStoreSnapshot>(snapshot => snapshots.Add(snapshot));
 
             store.Todos[0].Toggle();
 
@@ -178,7 +370,5 @@ namespace Skclusive.Mobx.StateTree.Tests
 
             Assert.Equal("You are trying to read or write to an object that is no longer part of a state tree. (Object type was 'Todo').", ex2.Message);
         }
-
-        #endregion
     }
 }

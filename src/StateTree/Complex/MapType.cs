@@ -46,7 +46,7 @@ namespace Skclusive.Mobx.StateTree
 
         private void FinalizeNewInstance(ObjectNode node, object snapshot)
         {
-            var objNode = node ;
+            var objNode = node;
 
             var instance = objNode.StoredValue as IObservableMap<string, INode, T>;
 
@@ -130,17 +130,17 @@ namespace Skclusive.Mobx.StateTree
 
         public override void ApplyPatchLocally(INode node, string subpath, IJsonPatch patch)
         {
-            var value = GetValue(node);
+            var map = GetValue(node);
 
             switch (patch.Operation)
             {
                 case JsonPatchOperation.Add:
                 case JsonPatchOperation.Replace:
-                    value[subpath] = (T)patch.Value;
+                    map[subpath] = SubType.Create((S)patch.Value, Node.Environment);
                     break;
 
                 case JsonPatchOperation.Remove:
-                    value.Remove(subpath);
+                    map.Remove(subpath);
                     break;
             }
         }

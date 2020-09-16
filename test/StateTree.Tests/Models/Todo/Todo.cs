@@ -1,7 +1,7 @@
 using Skclusive.Mobx.Observable;
 using Skclusive.Mobx.StateTree;
 
-namespace BlazorTodo.Models
+namespace Skclusive.Mobx.StateTree.Tests
 {
     #region ITodo
 
@@ -15,6 +15,8 @@ namespace BlazorTodo.Models
     public interface ITodoActions
     {
         void Toggle();
+
+        void MakeUpper();
 
         void Remove();
 
@@ -65,6 +67,11 @@ namespace BlazorTodo.Models
         public void Edit(string title)
         {
             (Target as dynamic).Edit(title);
+        }
+
+        public void MakeUpper()
+        {
+            (Target as dynamic).MakeUpper();
         }
     }
 

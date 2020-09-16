@@ -2,97 +2,62 @@
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
+using static Skclusive.Mobx.StateTree.Tests.TestTypes;
 
 namespace Skclusive.Mobx.StateTree.Tests
 {
-    public interface IMailSnapshot
-    {
-        string To { set; get; }
-    }
-
-    public interface IMail : IMailSnapshot
-    {
-    }
-
-    internal class MailSnapshot : IMailSnapshot
-    {
-        public string To { set; get; }
-    }
-
-    internal class MailProxy : ObservableProxy<IMail, INode>, IMail
-    {
-        public override IMail Proxy => this;
-
-        public MailProxy(IObservableObject<IMail, INode> target) : base(target)
-        {
-        }
-
-        public string To
-        {
-            get => Read<string>(nameof(To));
-            set => Write(nameof(To), value);
-        }
-    }
-
-
     public class TestMap
     {
-        private static IObjectType<IMailSnapshot, IMail> MailType = Types
-                      .Object<IMailSnapshot, IMail>("IMail")
-                      .Proxy(x => new MailProxy(x))
-                      .Snapshot(() => new MailSnapshot())
-                      .Mutable(o => o.To, Types.String, "world");
-
-        private static IType<IMap<string, IMailSnapshot>, IObservableMap<string, INode, IMail>> MailMapType = Types.Map(MailType);
+        private static IType<IMap<string, IModelSnapshot>, IObservableMap<string, INode, IModel>> ModelMapType = Types.Map(ModelType);
 
        [Fact]
         public void TestFactory()
         {
-            var mailMap = MailMapType.Create();
+            var modelMap = ModelMapType.Create();
 
-            Assert.NotNull(mailMap);
+            Assert.NotNull(modelMap);
         }
 
         [Fact]
         public void TestSnapshot()
         {
-            var mailMap = MailMapType.Create
+            var modelMap = ModelMapType.Create
             (
-                new Map<string, IMailSnapshot>
+                new Map<string, IModelSnapshot>
                 {
-                    { "hello", new MailSnapshot { To = "world" } }
+                    { "hello", new ModelSnapshot { To = "world" } }
                 }
             );
 
-            Assert.NotNull(mailMap);
-            Assert.True(mailMap.ContainsKey("hello"));
-            Assert.Equal(1, mailMap.Keys.Count);
+            Assert.NotNull(modelMap);
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
 
-            Assert.True(mailMap["hello"] is IMailSnapshot);
-            Assert.Equal("world", mailMap["hello"].To);
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("world", modelMap["hello"].To);
 
-            var snapshot = mailMap.GetSnapshot<IMap<string, IMailSnapshot>>();
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
 
             Assert.NotNull(snapshot);
             Assert.True(snapshot.ContainsKey("hello"));
             Assert.Equal(1, snapshot.Keys.Count);
 
-            Assert.True(snapshot["hello"] is IMailSnapshot);
+            Assert.True(snapshot["hello"] is IModelSnapshot);
             Assert.Equal("world", snapshot["hello"].To);
         }
 
         [Fact]
         public void TestEmitSnapshot()
         {
-            var mailMap = MailMapType.Create();
+            var modelMap = ModelMapType.Create();
 
-            mailMap.Unprotected();
+            modelMap.Unprotected();
 
-            var snapshots = new List<IMap<string, IMailSnapshot>>();
+            var snapshots = new List<IMap<string, IModelSnapshot>>();
 
-            mailMap.OnSnapshot<IMap<string, IMailSnapshot>>(snapshot => snapshots.Add(snapshot));
+            modelMap.OnSnapshot<IMap<string, IModelSnapshot>>(snapshot => snapshots.Add(snapshot));
 
-            mailMap["hello"] = MailType.Create();
+            modelMap["hello"] = ModelType.Create();
 
             var snapshot = snapshots[0];
 
@@ -100,110 +65,311 @@ namespace Skclusive.Mobx.StateTree.Tests
             Assert.True(snapshot.ContainsKey("hello"));
             Assert.Equal(1, snapshot.Keys.Count);
 
-            Assert.True(snapshot["hello"] is IMailSnapshot);
+            Assert.True(snapshot["hello"] is IModelSnapshot);
             Assert.Equal("world", snapshot["hello"].To);
         }
 
         [Fact]
         public void TestAppySnapshot()
         {
-            var mailMap = MailMapType.Create();
+            var modelMap = ModelMapType.Create();
 
-            mailMap.Unprotected();
+            modelMap.Unprotected();
 
-            mailMap.ApplySnapshot(new Map<string, IMailSnapshot>
+            modelMap.ApplySnapshot(new Map<string, IModelSnapshot>
             {
-                { "hello", new MailSnapshot { To = "world" } }
+                { "hello", new ModelSnapshot { To = "world" } }
             });
 
-            Assert.True(mailMap.ContainsKey("hello"));
-            Assert.Equal(1, mailMap.Keys.Count);
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
 
-            Assert.True(mailMap["hello"] is IMailSnapshot);
-            Assert.Equal("world", mailMap["hello"].To);
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("world", modelMap["hello"].To);
 
-            var snapshot = mailMap.GetSnapshot<IMap<string, IMailSnapshot>>();
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
 
             Assert.NotNull(snapshot);
             Assert.True(snapshot.ContainsKey("hello"));
             Assert.Equal(1, snapshot.Keys.Count);
 
-            Assert.True(snapshot["hello"] is IMailSnapshot);
+            Assert.True(snapshot["hello"] is IModelSnapshot);
             Assert.Equal("world", snapshot["hello"].To);
         }
 
         [Fact]
         public void TestUpdatedSnapshot()
         {
-            var mailMap = MailMapType.Create();
+            var modelMap = ModelMapType.Create();
 
-            mailMap.Unprotected();
+            modelMap.Unprotected();
 
-            mailMap["hello"] = MailType.Create();
+            modelMap["hello"] = ModelType.Create();
 
-            Assert.True(mailMap.ContainsKey("hello"));
-            Assert.Equal(1, mailMap.Keys.Count);
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
 
-            Assert.True(mailMap["hello"] is IMailSnapshot);
-            Assert.Equal("world", mailMap["hello"].To);
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("world", modelMap["hello"].To);
 
-            var snapshot = mailMap.GetSnapshot<IMap<string, IMailSnapshot>>();
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
 
             Assert.NotNull(snapshot);
             Assert.True(snapshot.ContainsKey("hello"));
             Assert.Equal(1, snapshot.Keys.Count);
 
-            Assert.True(snapshot["hello"] is IMailSnapshot);
+            Assert.True(snapshot["hello"] is IModelSnapshot);
             Assert.Equal("world", snapshot["hello"].To);
         }
 
         [Fact]
         public void TestAppyIsSameSnapshot()
         {
-            var mailMap = MailMapType.Create();
+            var modelMap = ModelMapType.Create();
 
-            mailMap.Unprotected();
+            modelMap.Unprotected();
 
-            mailMap.ApplySnapshot(new Map<string, IMailSnapshot>
+            modelMap.ApplySnapshot(new Map<string, IModelSnapshot>
             {
-                { "hello", new MailSnapshot { To = "world" } }
+                { "hello", new ModelSnapshot { To = "world" } }
             });
 
-            Assert.True(mailMap.ContainsKey("hello"));
-            Assert.Equal(1, mailMap.Keys.Count);
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
 
-            Assert.True(mailMap["hello"] is IMailSnapshot);
-            Assert.Equal("world", mailMap["hello"].To);
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("world", modelMap["hello"].To);
 
-            var snapshot = mailMap.GetSnapshot<IMap<string, IMailSnapshot>>();
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
 
             Assert.NotNull(snapshot);
             Assert.True(snapshot.ContainsKey("hello"));
             Assert.Equal(1, snapshot.Keys.Count);
 
-            Assert.True(snapshot["hello"] is IMailSnapshot);
+            Assert.True(snapshot["hello"] is IModelSnapshot);
             Assert.Equal("world", snapshot["hello"].To);
 
-            mailMap.ApplySnapshot(new Map<string, IMailSnapshot>
+            modelMap.ApplySnapshot(new Map<string, IModelSnapshot>
             {
-                { "hello", new MailSnapshot { To = "world" } }
+                { "hello", new ModelSnapshot { To = "world" } }
             });
 
-            Assert.True(mailMap.ContainsKey("hello"));
-            Assert.Equal(1, mailMap.Keys.Count);
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
 
-            Assert.True(mailMap["hello"] is IMailSnapshot);
-            Assert.Equal("world", mailMap["hello"].To);
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("world", modelMap["hello"].To);
 
-            snapshot = mailMap.GetSnapshot<IMap<string, IMailSnapshot>>();
+            snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
 
             Assert.NotNull(snapshot);
             Assert.True(snapshot.ContainsKey("hello"));
             Assert.Equal(1, snapshot.Keys.Count);
 
-            Assert.True(snapshot["hello"] is IMailSnapshot);
+            Assert.True(snapshot["hello"] is IModelSnapshot);
             Assert.Equal("world", snapshot["hello"].To);
 
+        }
+
+        [Fact]
+        public void TestEmitAddPatch()
+        {
+            var modelMap = ModelMapType.Create();
+
+            modelMap.Unprotected();
+
+            var patches = new List<IJsonPatch>();
+
+            modelMap.OnPatch((patch, _) => patches.Add(patch));
+
+            modelMap["hello"] = ModelType.Create(new ModelSnapshot { To = "universe" });
+
+            Assert.Single(patches);
+
+            Assert.NotNull(patches[0]);
+
+            Assert.Equal(JsonPatchOperation.Add, patches[0].Operation);
+            Assert.Equal("/hello", patches[0].Path);
+            Assert.True(patches[0].Value is IModelSnapshot);
+            Assert.Equal("universe", (patches[0].Value as IModelSnapshot).To);
+        }
+
+        [Fact]
+        public void TestAppyAddPatch()
+        {
+            var modelMap = ModelMapType.Create();
+
+            modelMap.Unprotected();
+
+            modelMap.ApplyPatch(new JsonPatch
+            {
+                Operation = JsonPatchOperation.Add,
+
+                Path = "hello",
+
+                Value = new ModelSnapshot { To = "universe" }
+            });
+
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
+
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("universe", modelMap["hello"].To);
+
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
+
+            Assert.NotNull(snapshot);
+            Assert.True(snapshot.ContainsKey("hello"));
+            Assert.Equal(1, snapshot.Keys.Count);
+
+            Assert.True(snapshot["hello"] is IModelSnapshot);
+            Assert.Equal("universe", snapshot["hello"].To);
+        }
+
+        [Fact]
+        public void TestEmitUpdatePatch()
+        {
+            var modelMap = ModelMapType.Create();
+
+            modelMap.Unprotected();
+
+            modelMap["hello"] = ModelType.Create();
+
+            var patches = new List<IJsonPatch>();
+
+            modelMap.OnPatch((patch, _) => patches.Add(patch));
+
+            modelMap["hello"] = ModelType.Create(new ModelSnapshot { To = "universe" });
+
+            Assert.Single(patches);
+
+            Assert.NotNull(patches[0]);
+
+            Assert.Equal(JsonPatchOperation.Replace, patches[0].Operation);
+            Assert.Equal("/hello", patches[0].Path);
+            Assert.True(patches[0].Value is IModelSnapshot);
+            Assert.Equal("universe", (patches[0].Value as IModelSnapshot).To);
+        }
+
+        [Fact]
+        public void TestAppyUpdatePatch()
+        {
+            var modelMap = ModelMapType.Create();
+
+            modelMap.Unprotected();
+
+            modelMap.ApplyPatch(new JsonPatch
+            {
+                Operation = JsonPatchOperation.Replace,
+
+                Path = "hello",
+
+                Value = new ModelSnapshot { To = "universe" }
+            });
+
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
+
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("universe", modelMap["hello"].To);
+
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
+
+            Assert.NotNull(snapshot);
+            Assert.True(snapshot.ContainsKey("hello"));
+            Assert.Equal(1, snapshot.Keys.Count);
+
+            Assert.True(snapshot["hello"] is IModelSnapshot);
+            Assert.Equal("universe", snapshot["hello"].To);
+        }
+
+        [Fact]
+        public void TestEmitRemovePatch()
+        {
+            var modelMap = ModelMapType.Create();
+
+            modelMap.Unprotected();
+
+            modelMap["hello"] = ModelType.Create();
+
+            var patches = new List<IJsonPatch>();
+
+            modelMap.OnPatch((patch, _) => patches.Add(patch));
+
+            modelMap.Remove("hello");
+
+            Assert.Single(patches);
+
+            Assert.NotNull(patches[0]);
+
+            Assert.Equal(JsonPatchOperation.Remove, patches[0].Operation);
+            Assert.Equal("/hello", patches[0].Path);
+            Assert.Null(patches[0].Value);
+        }
+
+        [Fact]
+        public void TestAppyRemovePatch()
+        {
+            var modelMap = ModelMapType.Create();
+
+            modelMap.Unprotected();
+
+            modelMap["hello"] = ModelType.Create();
+
+            modelMap.ApplyPatch(new JsonPatch
+            {
+                Operation = JsonPatchOperation.Remove,
+
+                Path = "hello"
+            });
+
+            Assert.False(modelMap.ContainsKey("hello"));
+            Assert.Equal(0, modelMap.Keys.Count);
+
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
+
+            Assert.NotNull(snapshot);
+            Assert.False(snapshot.ContainsKey("hello"));
+            Assert.Equal(0, snapshot.Keys.Count);
+        }
+
+        [Fact]
+        public void TestAppyPatches()
+        {
+            var modelMap = ModelMapType.Create();
+
+            modelMap.Unprotected();
+
+            modelMap.ApplyPatch(new JsonPatch
+            {
+                Operation = JsonPatchOperation.Add,
+
+                Path = "hello",
+
+                Value = new ModelSnapshot { To = "mars" }
+            }, new JsonPatch
+            {
+                Operation = JsonPatchOperation.Replace,
+
+                Path = "hello",
+
+                Value = new ModelSnapshot { To = "universe" }
+            });
+
+            Assert.True(modelMap.ContainsKey("hello"));
+            Assert.Equal(1, modelMap.Keys.Count);
+
+            Assert.True(modelMap["hello"] is IModelSnapshot);
+            Assert.Equal("universe", modelMap["hello"].To);
+
+            var snapshot = modelMap.GetSnapshot<IMap<string, IModelSnapshot>>();
+
+            Assert.NotNull(snapshot);
+            Assert.True(snapshot.ContainsKey("hello"));
+            Assert.Equal(1, snapshot.Keys.Count);
+
+            Assert.True(snapshot["hello"] is IModelSnapshot);
+            Assert.Equal("universe", snapshot["hello"].To);
         }
     }
 }
