@@ -180,14 +180,14 @@ namespace Skclusive.Mobx.StateTree
             return new CustomType<S, T>(options);
         }
 
-        public static IType<int, T> Reference<T>(IType<int, T> targetType)
-        {
-            return new IdentifierReferenceType<int, T>(targetType);
-        }
+        //public static IType<int, T> Reference<T>(IType<int, T> targetType)
+        //{
+        //    return new IdentifierReferenceType<int, T>(targetType);
+        //}
 
-        public static IType<string, T> Reference<T>(IType<string, T> targetType)
+        public static IType<I, T> Reference<I, S, T>(IType<S, T> targetType)
         {
-            return new IdentifierReferenceType<string, T>(targetType);
+            return new IdentifierReferenceType<I, S, T>(targetType);
         }
 
         public static IType<int, T> Reference<T>(IType<int, T> targetType, IReferenceOptions<int, T> options)

@@ -40,7 +40,7 @@ namespace Skclusive.Mobx.StateTree
         }
     }
 
-    public abstract class BaseReferenceType<S, T> : Type<S, T>
+    public abstract class BaseReferenceType<I, S, T> : Type<I, T>
     {
         protected BaseReferenceType(IType<S, T> targetType) : base($"reference(${ targetType.Name})")
         {
@@ -62,9 +62,9 @@ namespace Skclusive.Mobx.StateTree
 
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
         {
-            if (typeof(S) != value.GetType())
+            if (typeof(I) != value.GetType())
             {
-                return new IValidationError[]
+               return new IValidationError[]
                {
                     new ValidationError
                     {
@@ -81,7 +81,7 @@ namespace Skclusive.Mobx.StateTree
         }
     }
 
-    public class IdentifierReferenceType<S, T> : BaseReferenceType<S, T>
+    public class IdentifierReferenceType<I, S, T> : BaseReferenceType<I, S, T>
     {
         public IdentifierReferenceType(IType<S, T> targetType) : base(targetType)
         {
@@ -91,7 +91,7 @@ namespace Skclusive.Mobx.StateTree
         {
             if (!node.IsAlive)
             {
-                return default(T);
+                return default;
             }
 
             var storeRef = node.StoredValue as StoredReference;
@@ -113,16 +113,16 @@ namespace Skclusive.Mobx.StateTree
             return (T)target.Value;
         }
 
-        public override S GetSnapshot(INode node, bool applyPostProcess)
+        public override I GetSnapshot(INode node, bool applyPostProcess)
         {
             var storeRef = node.StoredValue as StoredReference;
 
             switch (storeRef.Type)
             {
                 case StoreType.Object:
-                    return (S)(object)storeRef.Value.GetStateTreeNode().Identifier;
+                    return (I)(object)storeRef.Value.GetStateTreeNode().Identifier;
                 case StoreType.Identifier:
-                    return (S)storeRef.Value;
+                    return (I)storeRef.Value;
             }
 
             throw new Exception("Failed to get snapshot");
@@ -130,7 +130,7 @@ namespace Skclusive.Mobx.StateTree
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object snapshot)
         {
-            return this.CreateNode(parent as ObjectNode, subpath, environment, new StoredReference(snapshot.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier, snapshot));
+            return this.CreateNode<string, StoredReference>(parent as ObjectNode, subpath, environment, new StoredReference(snapshot.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier, snapshot));
         }
 
         public override INode Reconcile(INode current, object newValue)
@@ -162,7 +162,7 @@ namespace Skclusive.Mobx.StateTree
         S SetReference(T value, IStateTreeNode parent);
     }
 
-    public class CustomReferenceType<S, T> : BaseReferenceType<S, T>
+    public class CustomReferenceType<S, T> : BaseReferenceType<S, S, T>
     {
         public CustomReferenceType(IType<S, T> targetType, IReferenceOptions<S, T> options) : base(targetType)
         {
