@@ -108,15 +108,17 @@ namespace Skclusive.Mobx.StateTree
             return false;
         }
 
-        public static INode ValueAsNode<S, T>(IType<S, T> type, ObjectNode parent, string subpath, object value)
+        public static INode ValueAsNode<S, T>(IType<S, T> type, ObjectNode parent, string subpath, object value, bool typeCheck)
         {
-            return ValueAsNode<S, T>(type, parent, subpath, value, null);
+            return ValueAsNode<S, T>(type, parent, subpath, value, null, typeCheck);
         }
 
-        public static INode ValueAsNode<S, T>(IType<S, T> type, ObjectNode parent, string subpath, object value, INode oldNode)
+        public static INode ValueAsNode<S, T>(IType<S, T> type, ObjectNode parent, string subpath, object value, INode oldNode, bool typeCheck)
         {
-            // ensure the value is valid-ish
-            Typecheck(type, value);
+            if (typeCheck)
+            {
+                Typecheck(type, value);
+            }
 
             // the new value has a MST node
             if (value.IsStateTreeNode())
@@ -150,7 +152,7 @@ namespace Skclusive.Mobx.StateTree
             return type.Instantiate(parent, subpath, parent.Environment, value);
         }
 
-        public static List<INode> ReconcileListItems<S, T>(IType<S, T> type, ObjectNode parent, List<INode> oldNodes, object[] newValues, string[] newPaths)
+        public static List<INode> ReconcileListItems<S, T>(IType<S, T> type, ObjectNode parent, List<INode> oldNodes, object[] newValues, string[] newPaths, bool typeCheck = true)
         {
             INode oldNode, oldMatch;
 
@@ -192,12 +194,12 @@ namespace Skclusive.Mobx.StateTree
                         // this node is owned by this parent, but not in the reconcilable set, so it must be double
                         throw new Exception($"Cannot add an object to a state tree if it is already part of the same or another state tree.Tried to assign an object to '{parent.Path}/{newPaths[i]}', but it lives already at '{newValue.GetStateTreeNode().Path}'");
                     }
-                    oldNodes.Splice(i, 0, ValueAsNode(type, parent, newPaths[i], newValue));
+                    oldNodes.Splice(i, 0, ValueAsNode(type, parent, newPaths[i], newValue, typeCheck));
 
                 }
                 else if (AreSame(oldNode, newValue)) // both are the same, reconcile
                 {
-                    oldNodes[i] = ValueAsNode(type, parent, newPaths[i], newValue, oldNode);
+                    oldNodes[i] = ValueAsNode(type, parent, newPaths[i], newValue, oldNode, typeCheck);
                     // nothing to do, try to reorder
                 }
                 else
@@ -214,7 +216,7 @@ namespace Skclusive.Mobx.StateTree
                         }
                     }
 
-                    oldNodes.Splice(i, 0, ValueAsNode(type, parent, newPaths[i], newValue, oldMatch));
+                    oldNodes.Splice(i, 0, ValueAsNode(type, parent, newPaths[i], newValue, oldMatch, typeCheck));
                 }
             }
 

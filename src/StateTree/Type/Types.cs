@@ -185,6 +185,11 @@ namespace Skclusive.Mobx.StateTree
         //    return new IdentifierReferenceType<int, T>(targetType);
         //}
 
+        public static IType<string, T> Reference<S, T>(IType<S, T> targetType)
+        {
+            return new IdentifierReferenceType<string, S, T>(targetType);
+        }
+
         public static IType<I, T> Reference<I, S, T>(IType<S, T> targetType)
         {
             return new IdentifierReferenceType<I, S, T>(targetType);
@@ -208,6 +213,11 @@ namespace Skclusive.Mobx.StateTree
         public static IType<S[], IObservableList<INode, T>> List<S, T>(IType<S, T> subtype)
         {
             return new ListType<S, T>($"{subtype.Name}[]", subtype);
+        }
+
+        public static IType<S[], IObservableList<INode, ILazy<T>>> ListLazy<S, T>(IType<S, T> subtype)
+        {
+            return new ListLazyType<S, T>($"{subtype.Name}[]", subtype);
         }
 
         public static IType<IMap<string, S>, IObservableMap<string, INode, T>> Map<S, T>(IType<S, T> subtype)
