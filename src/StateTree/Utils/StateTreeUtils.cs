@@ -148,6 +148,14 @@ namespace Skclusive.Mobx.StateTree
                 return node;
             }
 
+            // TODO: revisit custom impl
+            if (value is INodeHolder nodeHolder)
+            {
+                var node = nodeHolder.Node;
+                node.SetParent(parent, subpath);
+                return node;
+            }
+
             // nothing to do, create from scratch
             return type.Instantiate(parent, subpath, parent.Environment, value);
         }

@@ -6,21 +6,26 @@ using System.Linq;
 
 namespace Skclusive.Mobx.StateTree
 {
+    public interface INodeHolder
+    {
+        INode Node { get; }
+    }
+
     public interface ILazy<T>
     {
         T Value { get; }
     }
 
-    public class NodeValue<T> : ILazy<T>
+    public class NodeValue<T> : ILazy<T>, INodeHolder
     {
-        private INode _node;
-
         public NodeValue(INode node)
         {
-            _node = node;
+            Node = node;
         }
 
-        public T Value => (T)_node.Value;
+        public T Value => (T)Node.Value;
+
+        public INode Node { get; private set; }
 
         public override bool Equals(object obj)
         {

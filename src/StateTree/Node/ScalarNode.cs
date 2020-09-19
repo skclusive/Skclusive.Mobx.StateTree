@@ -97,6 +97,12 @@ namespace Skclusive.Mobx.StateTree
 
         public void SetParent(ObjectNode newParent, string subpath)
         {
+            // TODO: custom changes
+            if (Parent == null)
+            {
+                Parent = newParent;
+            }
+
             if(Parent != newParent)
             {
                 throw new InvalidOperationException("Cannot change parent of immutable node");
