@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Skclusive.Mobx.Observable;
 
 namespace Skclusive.Mobx.StateTree
 {
@@ -17,11 +18,19 @@ namespace Skclusive.Mobx.StateTree
 
         public object Value { private set; get; }
 
-        internal StoredReference(StoreType type, object value)
+        public INode Node { set; get; }
+
+        public IType TargetType { private set; get; }
+
+        private IComputedValue<object> _resolvedValue;
+
+        internal StoredReference(StoreType type, object value, IType targetType)
         {
             Type = type;
 
             Value = value;
+
+            TargetType = targetType;
 
             if (Type == StoreType.Object)
             {
@@ -36,6 +45,28 @@ namespace Skclusive.Mobx.StateTree
                 {
                     throw new ArgumentException("Can only store references with a defined identifier attribute.");
                 }
+            }
+
+            _resolvedValue = ComputedValue<object>.From(() =>
+            {
+                // reference was initialized with the identifier of the target
+                var target = Node.Root.IdentifierCache?.Resolve(TargetType, Value.ToString());
+
+                if (target == null)
+                {
+                    throw new Exception($"Failed to resolve reference '{Value}' to type '{TargetType.Name}' (from node: {Node.Path})");
+                }
+
+                return target.Value;
+            });
+        }
+
+        public object ResolvedValue
+        {
+            get
+            {
+                //_resolvedValue.TrackAndCompute();
+                return _resolvedValue.Value;
             }
         }
     }
@@ -102,15 +133,7 @@ namespace Skclusive.Mobx.StateTree
                 return (T)storeRef.Value;
             }
 
-            // reference was initialized with the identifier of the target
-            var target = node.Root.IdentifierCache?.Resolve(TargetType, (string)storeRef.Value);
-
-            if (target == null)
-            {
-                throw new Exception($"Failed to resolve reference '{storeRef.Value}' to type '{TargetType.Name}' (from node: {node.Path})");
-            }
-
-            return (T)target.Value;
+            return (T)storeRef.ResolvedValue;
         }
 
         public override I GetSnapshot(INode node, bool applyPostProcess)
@@ -120,6 +143,7 @@ namespace Skclusive.Mobx.StateTree
             switch (storeRef.Type)
             {
                 case StoreType.Object:
+                    //storeRef.Value[storeRef.Value.GetStateTreeNode().IdentifierAttribute]
                     return (I)(object)storeRef.Value.GetStateTreeNode().Identifier;
                 case StoreType.Identifier:
                     return (I)storeRef.Value;
@@ -130,7 +154,15 @@ namespace Skclusive.Mobx.StateTree
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object snapshot)
         {
-            return this.CreateNode<string, StoredReference>(parent as ObjectNode, subpath, environment, new StoredReference(snapshot.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier, snapshot));
+            var storeType = snapshot.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier;
+
+            StoredReference storedReference;
+
+            var node = this.CreateNode<string, StoredReference>(parent as ObjectNode, subpath, environment, storedReference = new StoredReference(storeType, snapshot, TargetType));
+
+            storedReference.Node = node;
+
+            return node;
         }
 
         public override INode Reconcile(INode current, object newValue)

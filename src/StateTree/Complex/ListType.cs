@@ -23,12 +23,12 @@ namespace Skclusive.Mobx.StateTree
 
         public override string Describe => $"{SubType.Describe}[]";
 
-        private IObservableList<INode, T> CreateNewInstance()
+        private IObservableList<INode, T> CreateNewInstance(IMap<string, INode> childNodes)
         {
-            return ObservableList<INode, T>.From(null, null, this);
+            return ObservableList<INode, T>.FromIn(ConvertChildNodesToList(childNodes), null, this);
         }
 
-        private void FinalizeNewInstance(ObjectNode node, object snapshot)
+        private void FinalizeNewInstance(ObjectNode node)
         {
             var instance = GetValue(node);
 
@@ -36,14 +36,33 @@ namespace Skclusive.Mobx.StateTree
 
             instance.Intercept(change => WillChange(change));
 
-            node.ApplySnapshot(snapshot);
-
             instance.Observe(change => DidChange(change));
         }
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
         {
-            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (_) => CreateNewInstance(), (node, snapshot) => FinalizeNewInstance(node as ObjectNode, snapshot));
+            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (childNodes) => CreateNewInstance(childNodes as IMap<string, INode>), (node, snapshot) => FinalizeNewInstance(node as ObjectNode));
+        }
+
+        public override IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
+        {
+            List<object> values = new List<object>();
+
+            foreach(var item in ((IEnumerable)snapshot))
+            {
+                values.Add(item);
+            }
+
+            IEnvironment env = node.Environment;
+
+            return values.Select((value, index) => (value, index)).Aggregate(new Map<string, INode>(), (map, pair) =>
+            {
+                var subpath = $"{pair.index}";
+
+                map[subpath] = SubType.Instantiate(node, subpath, env, pair.value);
+
+                return map;
+            });
         }
 
         public override void ApplyPatchLocally(INode node, string subpath, IJsonPatch patch)
@@ -131,7 +150,7 @@ namespace Skclusive.Mobx.StateTree
 
         protected override S[] GetDefaultSnapshot()
         {
-            return new S[] { };
+            return Array.Empty<S>();
         }
 
         protected override IValidationError[] IsValidSnapshot(object values, IContextEntry[] context)
@@ -147,7 +166,7 @@ namespace Skclusive.Mobx.StateTree
 
                 var errors = list.Select((value, index) => SubType.Validate(value, StateTreeUtils.GetContextForPath(context, $"{index}", SubType)));
 
-                return errors.Aggregate(new IValidationError[] { }, (acc, value) => acc.Concat(value).ToArray());
+                return errors.Aggregate(Array.Empty<IValidationError>(), (acc, value) => acc.Concat(value).ToArray());
             }
 
             return new IValidationError[]
@@ -180,7 +199,7 @@ namespace Skclusive.Mobx.StateTree
                         {
                             return null;
                         }
-                        change.NewValue = StateTreeUtils.ReconcileListItems(SubType, node,
+                        change.NewValue = ReconcileListItems(node, SubType,
                             new INode[] { childNodes[change.Index] }.ToList(),
                             new object[] { change.NewValue },
                             new string[] { $"{change.Index}" })[0];
@@ -188,7 +207,7 @@ namespace Skclusive.Mobx.StateTree
                     break;
                 case ChangeType.SPLICE:
                     {
-                        change.Added = StateTreeUtils.ReconcileListItems(SubType, node,
+                        change.Added = ReconcileListItems(node, SubType,
                             childNodes.Slice(change.Index, change.Index + change.RemovedCount),
                             change.Added,
                             change.Added.Select((added, index) => $"{change.Index + index}").ToArray())
@@ -299,6 +318,142 @@ namespace Skclusive.Mobx.StateTree
 
                 Snapshot = value,
             };
+        }
+
+        public static bool AreSame(INode oldNode, object newValue)
+        {
+            // the new value has the same node
+            if (newValue.IsStateTreeNode())
+            {
+                return newValue.GetStateTreeNode() == oldNode;
+            }
+
+            if (StateTreeUtils.IsMutatble(newValue) && oldNode.Snapshot == newValue)
+            {
+                return true;
+            }
+
+            if (oldNode is ObjectNode oNode)
+            {
+                if (!string.IsNullOrWhiteSpace(oNode.Identifier) && !string.IsNullOrWhiteSpace(oNode.IdentifierAttribute))
+                {
+                    return EqualityComparer<object>.Default.Equals(StateTreeUtils.GetPropertyValue(newValue, oNode.IdentifierAttribute), oNode.Identifier);
+                }
+            }
+
+            return false;
+        }
+
+        public static INode ValueAsNode<Sx, Tx>(IType<Sx, Tx> type, ObjectNode parent, string subpath, object value)
+        {
+            return ValueAsNode(type, parent, subpath, value, null);
+        }
+
+        public static INode ValueAsNode<Sx, Tx>(IType<Sx, Tx> type, ObjectNode parent, string subpath, object value, INode oldNode)
+        {
+            StateTreeUtils.Typecheck(type, value);
+
+            // the new value has a MST node
+            if (value.IsStateTreeNode())
+            {
+                var node = value.GetStateTreeNode();
+
+                node.AssertAlive();
+
+                // the node lives here
+                if (node.Parent != null && node.Parent == parent)
+                {
+                    node.SetParent(parent, subpath);
+
+                    if (oldNode != null && oldNode != node)
+                    {
+                        oldNode.Dispose();
+                    }
+                    return node;
+                }
+            }
+
+            // there is old node and new one is a value/snapshot
+            if (oldNode != null)
+            {
+                var node = type.Reconcile(oldNode, value);
+                node.SetParent(parent, subpath);
+                return node;
+            }
+
+            // nothing to do, create from scratch
+            return type.Instantiate(parent, subpath, parent.Environment, value);
+        }
+
+        public static List<INode> ReconcileListItems<Sx, Tx>(ObjectNode parent, IType<Sx, Tx> type,  List<INode> oldNodes, object[] newValues, string[] newPaths)
+        {
+            INode oldNode, oldMatch;
+
+            object newValue;
+
+            bool hasNewNode = false;
+
+            for (int i = 0; ; i++)
+            {
+                hasNewNode = i <= newValues.Length - 1;
+                oldNode = i < oldNodes.Count ? oldNodes[i] : null;
+                newValue = hasNewNode ? newValues[i] : null;
+
+                // for some reason, instead of newValue we got a node, fallback to the storedValue
+                // TODO: https://github.com/mobxjs/mobx-state-tree/issues/340#issuecomment-325581681
+                if (StateTreeUtils.IsNode(newValue) || newValue is TempNode)
+                {
+                    newValue = (newValue as INode).StoredValue;
+                }
+
+                // both are empty, end
+                if (oldNode == null && !hasNewNode)
+                {
+                    break;
+                    // new one does not exists, old one dies
+                }
+                else if (!hasNewNode)
+                {
+                    oldNode.Dispose();
+                    oldNodes.Splice(i, 1);
+                    i--;
+                    // there is no old node, create it
+                }
+                else if (oldNode == null)
+                {
+                    // check if already belongs to the same parent. if so, avoid pushing item in. only swapping can occur.
+                    if (newValue.IsStateTreeNode() && newValue.GetStateTreeNode().Parent == parent)
+                    {
+                        // this node is owned by this parent, but not in the reconcilable set, so it must be double
+                        throw new Exception($"Cannot add an object to a state tree if it is already part of the same or another state tree.Tried to assign an object to '{parent.Path}/{newPaths[i]}', but it lives already at '{newValue.GetStateTreeNode().Path}'");
+                    }
+                    oldNodes.Splice(i, 0, ValueAsNode(type, parent, newPaths[i], newValue));
+
+                }
+                else if (AreSame(oldNode, newValue)) // both are the same, reconcile
+                {
+                    oldNodes[i] = ValueAsNode(type, parent, newPaths[i], newValue, oldNode);
+                    // nothing to do, try to reorder
+                }
+                else
+                {
+                    oldMatch = null;
+
+                    // find a possible candidate to reuse
+                    for (int j = i; j < oldNodes.Count; j++)
+                    {
+                        if (AreSame(oldNodes[j], newValue))
+                        {
+                            oldMatch = oldNodes.Splice(j, 1)[0];
+                            break;
+                        }
+                    }
+
+                    oldNodes.Splice(i, 0, ValueAsNode(type, parent, newPaths[i], newValue, oldMatch));
+                }
+            }
+
+            return oldNodes;
         }
     }
 }

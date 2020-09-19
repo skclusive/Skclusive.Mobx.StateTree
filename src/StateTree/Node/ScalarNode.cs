@@ -5,46 +5,45 @@ namespace Skclusive.Mobx.StateTree
 {
     public class ScalarNode : INode
     {
-        public IEnvironment Environment { set; get; }
+        public IEnvironment Environment { get; }
 
-        private IObservableValue<string> _SubPath { set; get; }
+        protected NodeLifeCycle State { set; get; }
 
-        public string Subpath { set => (_SubPath as IValueWriter<string>).Value = value; get => (_SubPath as IValueReader<string>).Value; }
+        public IType Type { get; }
 
-        public bool AutoUnbox { set; get; }
+        public object StoredValue { set; get; }
+
+        public ObjectNode Parent { private set; get; }
+
+        public string Subpath { set; get; }
+
+        public bool AutoUnbox { get; }
 
         public ScalarNode(IType type,
            ObjectNode parent, string subpath,
            IEnvironment environment,
-           object initialValue, object storedValue,
-           bool canAttachTreeNode,
-           Action<INode, object> finalize)
+           object initialSnapshot,
+           Func<object, object> createNewInstance,
+           Action<INode, object> finalizeNewInstance = null)
         {
             Type = type;
-
-            StoredValue = storedValue;
 
             Parent = parent;
 
             Environment = environment;
 
-            _SubPath = ObservableValue<string>.From();
-
             Subpath = subpath;
+
+            StoredValue = createNewInstance(initialSnapshot);
 
             AutoUnbox = true;
 
             State = NodeLifeCycle.INITIALIZING;
 
-            if (canAttachTreeNode)
-            {
-                NodeCache.Add(StoredValue, new StateTreeNode(this));
-            }
-
             bool sawException = true;
             try
             {
-                finalize?.Invoke(this, initialValue);
+                finalizeNewInstance?.Invoke(this, initialSnapshot);
 
                 State = NodeLifeCycle.CREATED;
 
@@ -60,12 +59,6 @@ namespace Skclusive.Mobx.StateTree
             }
         }
 
-        protected NodeLifeCycle State { set; get; }
-
-        public IType Type { set; get; }
-
-        public object StoredValue { set; get; }
-
         public string Path
         {
             get
@@ -79,9 +72,7 @@ namespace Skclusive.Mobx.StateTree
             }
         }
 
-        public bool IsRoot { get => Parent == null; }
-
-        public ObjectNode Parent { private set; get; }
+        public bool IsRoot => Parent == null;
 
         public ObjectNode Root
         {
@@ -97,29 +88,14 @@ namespace Skclusive.Mobx.StateTree
 
         public void SetParent(ObjectNode newParent, string subpath)
         {
-            // TODO: custom changes
-            if (Parent == null)
-            {
-                Parent = newParent;
-            }
-
-            if(Parent != newParent)
-            {
-                throw new InvalidOperationException("Cannot change parent of immutable node");
-            }
-
-            if(Subpath != subpath)
-            {
-                Subpath = subpath ?? "";
-            }
+           // throw new InvalidOperationException("Cannot change parent of immutable node");
         }
 
-        public object Value { get => Type.GetValue(this); }
+        public object Value => Type.GetValue(this);
 
-        public object Snapshot { get => Type.GetSnapshot(this, false);  }
+        public object Snapshot => Type.GetSnapshot(this, false);
 
-
-        public bool IsAlive { get => State != NodeLifeCycle.DEAD; }
+        public bool IsAlive => State != NodeLifeCycle.DEAD;
 
         public object Unbox(INode node)
         {

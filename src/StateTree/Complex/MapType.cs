@@ -15,8 +15,16 @@ namespace Skclusive.Mobx.StateTree
         No
     }
 
-    public class MapType<S, T> : ComplexType<IMap<string, S>, IObservableMap<string, INode, T>>, IManipulator<INode, T, string>
+    public class MapType<S, T> : ComplexType<IMap<string, S>, IObservableMap<string, INode, T>>, IMapType, IManipulator<INode, T, string>
     {
+        private MapIdentifierMode IdentifierMode { set; get; }
+
+        private string IdentifierAttribute { set; get; }
+
+        private ObjectNode Node { set; get; }
+
+        private IType<S, T> SubType { set; get; }
+
         public MapType(string name, IType<S, T> subType) : base(name)
         {
             ShouldAttachNode = true;
@@ -26,25 +34,91 @@ namespace Skclusive.Mobx.StateTree
             SubType = subType;
 
             IdentifierMode = MapIdentifierMode.Unknown;
+
+            DeterminIdentifierMode();
         }
-
-        private MapIdentifierMode IdentifierMode { set; get; }
-
-        private string IdentifierAttribute { set; get; }
-
-        private ObjectNode Node { set; get; }
-
-        private IType<S, T> SubType { set; get; }
 
         public override string Describe => $"Map<string, {SubType.Describe}>";
 
-        private IObservableMap<string, INode, T> CreateNewInstance()
+        IType IMapType.SubType => SubType;
+
+        private void DeterminIdentifierMode()
         {
-            return ObservableMap<string, INode, T>.From(null, null, this);
+            var objectTypes = new List<IObjectType>();
+
+            TryCollectObjectType(SubType, objectTypes);
+
+            if (objectTypes.Count > 0)
+            {
+                string identifierAttribute = "";
+
+                foreach (var objectType in objectTypes)
+                {
+                    var objIdentifierAttribute = objectType.IdentifierAttribute;
+                    if (!string.IsNullOrWhiteSpace(objIdentifierAttribute))
+                    {
+                        if (!string.IsNullOrWhiteSpace(identifierAttribute) && identifierAttribute != objIdentifierAttribute)
+                        {
+                            throw new Exception($"The objects in a map should all have the same identifier attribute, expected '{identifierAttribute}', but child of type '{objectType.Name}' declared attribute '${objIdentifierAttribute}' as identifier");
+                        }
+
+                        identifierAttribute = objIdentifierAttribute;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(identifierAttribute))
+                {
+                    IdentifierAttribute = identifierAttribute;
+
+                    IdentifierMode = MapIdentifierMode.Yes;
+                }
+                else
+                {
+                    IdentifierMode = MapIdentifierMode.No;
+                }
+            }
+        }
+
+        public override IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
+        {
+            IDictionary<string, object> values = new Dictionary<string, object>();
+
+            if (snapshot is IMap<string, S> dictionary)
+            {
+                foreach(var item in dictionary.Keys)
+                {
+                    values[item.ToString()] = dictionary[item];
+                }
+            }
+
+            IEnvironment env = node.Environment;
+
+            return values.Aggregate(new Map<string, INode>(), (map, pair) =>
+            {
+                var subpath = $"{pair.Key}";
+
+                map[subpath] = SubType.Instantiate(node, subpath, env, pair.Value);
+
+                return map;
+            });
+        }
+
+        public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
+        {
+            if (IdentifierMode == MapIdentifierMode.Unknown)
+            {
+                DeterminIdentifierMode();
+            }
+            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (childNodes) => CreateNewInstance(childNodes as IMap<string, INode>), (node, snapshot) => FinalizeNewInstance(node as ObjectNode));
+        }
+
+        private IObservableMap<string, INode, T> CreateNewInstance(IMap<string, INode> childNodes)
+        {
+            return ObservableMap<string, INode, T>.FromIn(childNodes, null, this);
             // addHiddenFinalProp(map, "put", put)
         }
 
-        private void FinalizeNewInstance(ObjectNode node, object snapshot)
+        private void FinalizeNewInstance(ObjectNode node)
         {
             var objNode = node;
 
@@ -54,14 +128,7 @@ namespace Skclusive.Mobx.StateTree
 
             instance.Intercept(change => WillChange(change));
 
-            objNode.ApplySnapshot(snapshot);
-
             instance.Observe(change => DidChange(change));
-        }
-
-        public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
-        {
-            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (_) => CreateNewInstance(), (node, snapshot) => FinalizeNewInstance(node as ObjectNode, snapshot));
         }
 
         public override IObservableMap<string, INode, T> GetValue(INode node)
@@ -176,24 +243,6 @@ namespace Skclusive.Mobx.StateTree
         {
             if (node is ObjectNode objectNode)
             {
-                // identifier cannot be determined up front, as they might need to go through unions etc
-                // but for maps, we do want them to be regular, and consistently used.
-                if (IdentifierMode == MapIdentifierMode.Unknown)
-                {
-                    IdentifierMode =
-                        string.IsNullOrWhiteSpace(objectNode.IdentifierAttribute)
-                            ? MapIdentifierMode.No
-                            : MapIdentifierMode.Yes;
-                    IdentifierAttribute = objectNode.IdentifierAttribute;
-                }
-
-                if (objectNode.IdentifierAttribute != IdentifierAttribute)
-                {
-                    // both undefined if type is NO
-                    throw new InvalidOperationException($"The objects in a map should all have the same identifier attribute, expected '{IdentifierAttribute}', but child of type '{objectNode.Type.Name}' declared attribute '{objectNode.IdentifierAttribute}' as identifier");
-                }
-
-                // TODO: Identify and Fix
                 if (IdentifierMode == MapIdentifierMode.Yes)
                 {
                     string identifier = objectNode.Identifier;
@@ -309,7 +358,7 @@ namespace Skclusive.Mobx.StateTree
 
         public T Dehance(INode node)
         {
-            return (T)(Node?.Unbox(node) ?? node.Value);
+            return (T)(Node?.Unbox(node) ?? node?.Value);
         }
 
         public object Enhance(object newv, object oldV, object name)
@@ -346,6 +395,34 @@ namespace Skclusive.Mobx.StateTree
         public INode Enhance(INode newv, INode oldV, string name)
         {
             return newv;
+        }
+
+        private static void TryCollectObjectType(IType type, List<IObjectType> objectTypes)
+        {
+            if (type is IObjectType objectType)
+            {
+                objectTypes.Add(objectType);
+            }
+            else if (type is IOptionalType optionalType)
+            {
+                TryCollectObjectType(optionalType.SubType, objectTypes);
+            }
+            else if (type is ILateType lateType)
+            {
+                try
+                {
+                    TryCollectObjectType(lateType.SubType, objectTypes);
+                } catch(Exception)
+                {
+                }
+            }
+            else if (type is IUnionType unionType)
+            {
+                foreach (var subtype in unionType.SubTypes)
+                {
+                    TryCollectObjectType(subtype, objectTypes);
+                }
+            }
         }
     }
 }

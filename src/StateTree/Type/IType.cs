@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Skclusive.Mobx.Observable;
 
 namespace Skclusive.Mobx.StateTree
 {
@@ -68,30 +69,28 @@ namespace Skclusive.Mobx.StateTree
 
     public enum TypeFlags
     {
-        String = 1 << 0,
-        Number = 1 << 1,
-        Boolean = 1 << 2,
-        Date = 1 << 3,
-        Literal = 1 << 4,
-        List = 1 << 5,
-        Map = 1 << 6,
-        Object = 1 << 7,
-        Frozen = 1 << 8,
-        Optional = 1 << 9,
-        Reference = 1 << 10,
-        Identifier = 1 << 11,
-        Late = 1 << 12,
-        Refinement = 1 << 13,
-        Union = 1 << 14,
-        Null = 1 << 15,
-        Undefined = 1 << 16
+        String = 1,
+        Number = 2,
+        Boolean = 4,
+        Date = 8,
+        Literal = 16,
+        List = 32,
+        Map = 64,
+        Object = 128,
+        Frozen = 256,
+        Optional = 512,
+        Reference = 1024,
+        Identifier = 2048,
+        Late = 4096,
+        Refinement = 8192,
+        Union = 16384,
+        Null = 32768,
+        Undefined = 65536
     }
 
     public interface ISnapshottable<S>
     {
     }
-
-
 
     public interface IType
     {
@@ -115,6 +114,8 @@ namespace Skclusive.Mobx.StateTree
 
         // Internal api's
         INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue);
+
+        IMap<string, INode> InitializeChildNodes(INode node, object snapshot);
 
         INode Reconcile(INode current, object newValue);
 

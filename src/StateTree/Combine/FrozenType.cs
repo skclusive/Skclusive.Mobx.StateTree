@@ -20,6 +20,7 @@ namespace Skclusive.Mobx.StateTree
 
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
         {
+            // TODO: to fix condition
             if (Math.Max(0, 1) == 0) // !isSerializable(value)
             {
                 return new IValidationError[]
@@ -35,7 +36,7 @@ namespace Skclusive.Mobx.StateTree
                 };
             }
 
-            return new IValidationError[] { };
+            return Array.Empty<IValidationError>();
         }
     }
 }

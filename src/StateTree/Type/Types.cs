@@ -19,7 +19,7 @@ namespace Skclusive.Mobx.StateTree
          *   lastName: "Doe"
          * })
          */
-        public static ISimpleType<string> String = new StringType();
+        public readonly static ISimpleType<string> String = new StringType();
 
 
         /**
@@ -34,11 +34,11 @@ namespace Skclusive.Mobx.StateTree
          *   y: 0
          * })
          */
-        public static ISimpleType<decimal> Decimal = new DecimalType();
+        public readonly static ISimpleType<decimal> Decimal = new DecimalType();
 
-        public static ISimpleType<double> Double = new DoubleType();
+        public readonly static ISimpleType<double> Double = new DoubleType();
 
-        public static ISimpleType<int> Int = new IntType();
+        public readonly static ISimpleType<int> Int = new IntType();
 
         /**
          * Creates a type that can only contain a boolean value.
@@ -52,7 +52,7 @@ namespace Skclusive.Mobx.StateTree
          *   isAwesome: false
          * })
          */
-        public static ISimpleType<bool> Boolean = new BooleanType();
+        public readonly static ISimpleType<bool> Boolean = new BooleanType();
 
         /**
          * The type of the value `null`
@@ -60,9 +60,43 @@ namespace Skclusive.Mobx.StateTree
          * @export
          * @alias types.null
          */
-        public static ISimpleType<object> Null = new NullType();
+        public readonly static ISimpleType<object> Null = new NullType();
 
-        public static ISimpleType<object> Frozen = new FrozenType<object>();
+        public readonly static ISimpleType<object> Frozen = new FrozenType<object>();
+
+        /**
+         * Identifiers are used to make references, lifecycle events and reconciling works.
+         * Inside a state tree, for each type can exist only one instance for each given identifier.
+         *
+         * @example
+         *  const Todo = types.model("Todo", {
+         *      id: types.identifier,
+         *      title: types.string
+         *  })
+         *
+         * @export
+         * @alias types.identifier
+         * @template T
+         * @param {IType<T, T>} baseType
+         * @returns {IType<T, T>}
+         */
+        public readonly static IType<string, string> Identifier = new StringIdentifierType();
+
+        /**
+        * Similar to `types.identifier`, but `identifierNumber` will serialize from / to a number when applying snapshots
+        *
+        * @example
+        *  const Todo = types.model("Todo", {
+        *      id: types.identifierNumber,
+        *      title: types.string
+        *  })
+        *
+        * @export
+        * @alias types.identifierNumber
+        * @template T
+        * @returns {IType<T, T>}
+        */
+        public readonly static IType<int, int> IdentifierInt = new IntIdentifierType();
 
         public static ISimpleType<object> GetPrimitiveFactoryFromValue(object value)
         {
@@ -111,24 +145,14 @@ namespace Skclusive.Mobx.StateTree
 
         public static IType<S, T> Union<S, T>(params IType[] types)
         {
-            return Union<S, T>((string)null, types);
+            return Union<S, T>(null, types);
         }
 
-        public static IType<S, T> Union<S, T>(string name, params IType[] types)
-        {
-            return Union<S, T>(name, null, types);
-        }
-
-        public static IType<S, T> Union<S, T>(Func<object, IType> dispatcher, params IType[] types)
+        public static IType<S, T> Union<S, T>(UnionOptions options, params IType[] types)
         {
             var name = $"({string.Join(" | ", types.Select(type => type.Name))})";
 
-            return Union<S, T>(name, dispatcher, types);
-        }
-
-        public static IType<S, T> Union<S, T>(string name, Func<object, IType> dispatcher, params IType[] types)
-        {
-            return new UnionType<S, T>(name, types.ToList(), dispatcher);
+            return new UnionType<S, T>(name, types, options);
         }
 
         public static IType<object, object> OptionalNull = Optional(Types.Null, null);
@@ -158,21 +182,11 @@ namespace Skclusive.Mobx.StateTree
             return new LateObjectType<S, T>(name, definition);
         }
 
-        public static IType<string, string> Identifier()
+        public static IType<T, T> Enumeration<T>(params T[] enums)
         {
-            return new IdentifierType<string>(Types.String);
-        }
+            var types = enums.Select(enumx => Literal<T>(enumx)).ToArray();
 
-        public static IType<T, T> Identifier<T>(IType<T, T> type)
-        {
-            return new IdentifierType<T>(type);
-        }
-
-        public static IType<T, T> Enumeration<T>(string name, params T[] enums)
-        {
-            var options = enums.Select(enumx => Literal<T>(enumx)).ToArray();
-
-            return Union<T, T>(name, options);
+            return Union<T, T>(types);
         }
 
         public static IType<S, T> Custom<S, T>(ICustomTypeOptions<S, T> options)
@@ -213,11 +227,6 @@ namespace Skclusive.Mobx.StateTree
         public static IType<S[], IObservableList<INode, T>> List<S, T>(IType<S, T> subtype)
         {
             return new ListType<S, T>($"{subtype.Name}[]", subtype);
-        }
-
-        public static IType<S[], IObservableList<INode, ILazy<T>>> ListLazy<S, T>(IType<S, T> subtype)
-        {
-            return new ListLazyType<S, T>($"{subtype.Name}[]", subtype);
         }
 
         public static IType<IMap<string, S>, IObservableMap<string, INode, T>> Map<S, T>(IType<S, T> subtype)

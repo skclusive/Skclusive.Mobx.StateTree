@@ -64,6 +64,8 @@ namespace Skclusive.Mobx.StateTree
 
         object IType.SnapshotType => ((IType)SubType).SnapshotType;
 
+        public string IdentifierAttribute => SubType.IdentifierAttribute;
+
         public IObjectType<S, T> Include<Sx, Tx>(IObjectType<Sx, Tx> type)
         {
             return SubType.Include(type);
@@ -237,6 +239,11 @@ namespace Skclusive.Mobx.StateTree
         public bool IsAssignableFrom(IType type)
         {
             return SubType.IsAssignableFrom(type);
+        }
+
+        public IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
+        {
+            return SubType.InitializeChildNodes(node, snapshot);
         }
     }
 }

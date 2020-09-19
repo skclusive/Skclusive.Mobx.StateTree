@@ -51,14 +51,14 @@ namespace Skclusive.Mobx.StateTree.Tests
                       .Object<IUserSnapshot, IUser>("IUser")
                       .Proxy(x => new UserProxy(x))
                       .Snapshot(() => new UserSnapshot())
-                      .Mutable(o => o.Id, Types.Identifier())
+                      .Mutable(o => o.Id, Types.Identifier)
                       .Mutable(o => o.Name, Types.String);
 
         public readonly static IObjectType<string, IUser> UserRefType = Types
               .Object<string, IUser>("IUser")
               .Proxy(x => new UserProxy(x))
               .Snapshot(() => "")
-              .Mutable(o => o.Id, Types.Identifier())
+              .Mutable(o => o.Id, Types.Identifier)
               .Mutable(o => o.Name, Types.String);
     }
 }

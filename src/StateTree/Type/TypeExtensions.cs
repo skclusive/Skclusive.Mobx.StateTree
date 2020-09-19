@@ -47,13 +47,13 @@ namespace Skclusive.Mobx.StateTree
         }
 
         public static INode CreateNode<S, T>(this IType<S, T> type, ObjectNode parent, string subpath,
-        IEnvironment environment, object initialValue, Func<object, T> create, Action<INode, object> finalize = null)
+        IEnvironment environment, object initialValue, Func<object, object> createNewInstance, Action<INode, object> finalizeNewInstance = null)
         {
-            return (type as IType).CreateNode<S, T>(parent, subpath, environment, initialValue, create, finalize);
+            return (type as IType).CreateNode<S, T>(parent, subpath, environment, initialValue, createNewInstance, finalizeNewInstance);
         }
 
         public static INode CreateNode<S, T>(this IType type, ObjectNode parent, string subpath, IEnvironment environment,
-            object initialValue, Func<object, T> create, Action<INode, object> finalize = null)
+            object initialValue, Func<object, object> createNewInstance, Action<INode, object> finalizeNewInstance = null)
         {
             if (initialValue.IsStateTreeNode())
             {
@@ -66,33 +66,30 @@ namespace Skclusive.Mobx.StateTree
                 return targetNode;
             }
 
-            var storedValue = create(initialValue);
-
             if (type.ShouldAttachNode)
             {
-                var node = new ObjectNode(
+                return new ObjectNode
+                (
                     type,
                     parent,
                     subpath,
                     environment,
                     initialValue,
-                    storedValue,
-                    type.ShouldAttachNode,
-                    finalize
+                    createNewInstance,
+                    finalizeNewInstance
                 );
-                node.FinalizeCreation();
-                return node;
             }
 
-            return new ScalarNode(
+            return new ScalarNode
+            (
                 type,
                 parent,
                 subpath,
                 environment,
                 initialValue,
-                storedValue,
-                type.ShouldAttachNode,
-                finalize);
+                createNewInstance,
+                finalizeNewInstance
+            );
         }
     }
 }

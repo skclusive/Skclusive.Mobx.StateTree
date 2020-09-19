@@ -4,13 +4,15 @@ using System.Text;
 
 namespace Skclusive.Mobx.StateTree
 {
-    public class OptionalType<S, T> : Type<S, T>
+    public class OptionalType<S, T> : Type<S, T>, IOptionalType
     {
         private IType<S, T> _Type { set; get; }
 
         private Func<S> _DefaultValue { set; get; }
 
         public override string Describe => $"{_Type.Describe}?";
+
+        IType IOptionalType.SubType => _Type;
 
         public OptionalType(IType<S, T> type, Func<S> defaultValue) : base(type.Name)
         {
@@ -25,17 +27,24 @@ namespace Skclusive.Mobx.StateTree
 
         private S GetDefaultValue()
         {
-            var defaultValue = _DefaultValue != null ? _DefaultValue() : default(S);
+            var defaultValue = _DefaultValue != null ? _DefaultValue() : default;
 
             StateTreeUtils.Typecheck(_Type, defaultValue);
 
             return defaultValue;
         }
 
+        public S GetDefaultValueSnapshot()
+        {
+            var defaultValue = GetDefaultValue();
+
+            return defaultValue.IsStateTreeNode() ? (S)defaultValue.GetStateTreeNode().Snapshot : defaultValue;
+        }
+
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
         {
-            var value = initialValue ?? GetDefaultValue();
+            var value = initialValue ?? GetDefaultValueSnapshot();
 
             return _Type.Instantiate(parent, subpath, environment, value);
         }

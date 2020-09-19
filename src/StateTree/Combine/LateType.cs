@@ -2,7 +2,7 @@
 
 namespace Skclusive.Mobx.StateTree
 {
-    public class LateType<S, T> : Type<S, T>
+    public class LateType<S, T> : Type<S, T>, ILateType
     {
         public LateType(string name, Func<IType<S, T>> definition) : base(name)
         {
@@ -31,12 +31,13 @@ namespace Skclusive.Mobx.StateTree
             }
         }
 
-
         public override string Describe => SubType.Describe;
 
         public override TypeFlags Flags => SubType.Flags | TypeFlags.Late;
 
         public override bool ShouldAttachNode => SubType.ShouldAttachNode;
+
+        IType ILateType.SubType => SubType;
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
         {

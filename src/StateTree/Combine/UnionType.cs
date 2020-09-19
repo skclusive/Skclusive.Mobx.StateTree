@@ -4,17 +4,28 @@ using System.Linq;
 
 namespace Skclusive.Mobx.StateTree
 {
-    public class UnionType<S, T> : Type<S, T>
+    public class UnionOptions
+    {
+        public Func<object, IType> Dispatcher { set; get; }
+
+        public bool Eager { set; get; }
+    }
+
+    public class UnionType<S, T> : Type<S, T>, IUnionType
     {
         private IList<IType> _Types { set; get; }
 
         private Func<object, IType> _Dispatcher { set; get; }
 
-        public UnionType(string name, IList<IType> types, Func<object, IType> dispatcher) : base(name)
+        private bool _Eager { set; get; }
+
+        public UnionType(string name, IList<IType> types, UnionOptions options = null) : base(name)
         {
             _Types = types;
 
-            _Dispatcher = dispatcher;
+            _Dispatcher = options?.Dispatcher;
+
+            _Eager = options?.Eager ?? true;
 
             Flags = types.Aggregate(TypeFlags.Union, (acc, type) => acc | type.Flags);
 
@@ -27,6 +38,8 @@ namespace Skclusive.Mobx.StateTree
         }
 
         public override string Describe => $"({string.Join(" | ", _Types.Select(type => type.Describe))})";
+
+        IType[] IUnionType.SubTypes => _Types.ToArray();
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
         {
@@ -46,15 +59,7 @@ namespace Skclusive.Mobx.StateTree
                 return _Dispatcher(value);
             }
             // find the most accomodating type
-            var applicableTypes = _Types.Where(type => type.Is(value)).ToList();
-
-            if (applicableTypes.Count > 1)
-            {
-                throw new Exception(
-                $"Ambiguos snapshot {value} for union {Name}. Please provide a dispatch in the union declaration.");
-            }
-
-            return applicableTypes[0];
+            return _Types.FirstOrDefault(type => type.Is(value));
         }
 
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
@@ -64,39 +69,49 @@ namespace Skclusive.Mobx.StateTree
                 return _Dispatcher(value).Validate(value, context);
             }
 
-            var errors = _Types.Select(type => type.Validate(value, context));
-            var applicableTypes = errors.Where(error => error.Length == 0).ToArray();
+            var allErrors = new List<IValidationError[]>();
 
-            if (applicableTypes.Length > 1)
+            var applicableTypes = 0;
+
+            for (var i = 0; i < _Types.Count; i++)
             {
-                return new IValidationError[]
+                var type = _Types[i];
+
+                var errors = type.Validate(value, context);
+
+                if (errors.Length == 0)
                 {
-                    new ValidationError
+                    if (_Eager)
                     {
-                        Context = context,
-
-                        Value = value,
-
-                        Message = $"Multiple types are applicable for the union (hint: provide a dispatch function)"
+                        return Array.Empty<IValidationError>();
                     }
-                };
-            }
-            else if (applicableTypes.Length == 0)
-            {
-                return errors.Aggregate(new IValidationError[]
+                    else
+                    {
+                        applicableTypes++;
+                    }
+                }
+                else
                 {
-                    new ValidationError
-                    {
-                        Context = context,
-
-                        Value = value,
-
-                        Message = $"No type is applicable for the union."
-                    }
-                }, (acc, error) => acc.Concat(error).ToArray());
+                    allErrors.Add(errors);
+                }
             }
 
-            return new IValidationError[] { };
+            if (applicableTypes == 1)
+            {
+                return Array.Empty<IValidationError>();
+            }
+
+            return allErrors.Aggregate(new IValidationError[]
+            {
+                new ValidationError
+                {
+                    Context = context,
+
+                    Value = value,
+
+                    Message = $"No type is applicable for the union."
+                }
+            }, (acc, error) => acc.Concat(error).ToArray());
         }
     }
 }

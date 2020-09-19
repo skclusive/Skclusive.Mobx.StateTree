@@ -51,7 +51,7 @@ namespace Skclusive.Mobx.StateTree.Tests
                       .Object<IMessageSnapshot, IMessage>("IMessage")
                       .Proxy(x => new MessageProxy(x))
                       .Snapshot(() => new MessageSnapshot())
-                      .Mutable(o => o.Id, Types.Identifier())
+                      .Mutable(o => o.Id, Types.Identifier)
                       .Mutable(o => o.Title, Types.String);
     }
 }

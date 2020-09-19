@@ -5,7 +5,12 @@ using System.Linq.Expressions;
 
 namespace Skclusive.Mobx.StateTree
 {
-    public interface IObjectType<S, T, I> : IComplexType<S, T>
+    public interface IObjectType : IType
+    {
+        string IdentifierAttribute { get; }
+    }
+
+    public interface IObjectType<S, T, I> : IComplexType<S, T>, IObjectType
     {
         IReadOnlyCollection<Func<object, object>> Initializers { get; }
 

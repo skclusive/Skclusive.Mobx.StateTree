@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Skclusive.Mobx.Observable;
 
 namespace Skclusive.Mobx.StateTree
 {
@@ -28,6 +30,11 @@ namespace Skclusive.Mobx.StateTree
         public virtual bool ShouldAttachNode { get; protected set; }
 
         public abstract INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue);
+
+        public virtual IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
+        {
+            return null;
+        }
 
         public abstract string Describe { get; }
 
@@ -163,5 +170,15 @@ namespace Skclusive.Mobx.StateTree
         object IType.Type => Type;
 
         object IType.SnapshotType => SnapshotType;
+
+        public static INode[] ConvertChildNodesToList(IMap<string, INode> childNodes)
+        {
+            if (childNodes == null || childNodes.Count == 0)
+            {
+                return Array.Empty<INode>();
+            }
+
+            return childNodes.Select(pair => pair.Value).ToArray();
+        }
     }
 }

@@ -19,6 +19,6 @@ namespace Skclusive.Mobx.StateTree.Tests
 
     public partial class TestTypes
     {
-        public readonly static IType<Filter, Filter> FilterType = Types.Enumeration("Filter", Filter.None, Filter.Active, Filter.Completed, Filter.All);
+        public readonly static IType<Filter, Filter> FilterType = Types.Enumeration(Filter.None, Filter.Active, Filter.Completed, Filter.All);
     }
 }
