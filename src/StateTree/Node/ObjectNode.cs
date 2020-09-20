@@ -471,16 +471,7 @@ namespace Skclusive.Mobx.StateTree
 
         public object Unbox(INode node)
         {
-            if (node != null && node.Parent != null)
-            {
-                node.Parent.AssertAlive();
-            }
-
-            if (node != null && node.AutoUnbox)
-            {
-                return node.Value;
-            }
-            return node;
+            return node.Unbox<object>();
         }
 
         public override string ToString()

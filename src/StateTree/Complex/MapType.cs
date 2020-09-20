@@ -21,7 +21,7 @@ namespace Skclusive.Mobx.StateTree
 
         private string IdentifierAttribute { set; get; }
 
-        private ObjectNode Node { set; get; }
+        //private ObjectNode Node { set; get; }
 
         private IType<S, T> SubType { set; get; }
 
@@ -81,15 +81,15 @@ namespace Skclusive.Mobx.StateTree
 
         public override IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
         {
-            IDictionary<string, object> values = new Dictionary<string, object>();
+            IDictionary<string, S> values = snapshot as IDictionary<string, S>;
 
-            if (snapshot is IMap<string, S> dictionary)
-            {
-                foreach(var item in dictionary.Keys)
-                {
-                    values[item.ToString()] = dictionary[item];
-                }
-            }
+            //if (snapshot is IDictionary<string, S> dictionary)
+            //{
+            //    foreach(var item in dictionary.Keys)
+            //    {
+            //        values[item.ToString()] = dictionary[item];
+            //    }
+            //}
 
             IEnvironment env = node.Environment;
 
@@ -124,7 +124,7 @@ namespace Skclusive.Mobx.StateTree
 
             var instance = objNode.StoredValue as IObservableMap<string, INode, T>;
 
-            Node = objNode;
+            //Node = objNode;
 
             instance.Intercept(change => WillChange(change));
 
@@ -203,7 +203,7 @@ namespace Skclusive.Mobx.StateTree
             {
                 case JsonPatchOperation.Add:
                 case JsonPatchOperation.Replace:
-                    map[subpath] = SubType.Create((S)patch.Value, Node.Environment);
+                    map[subpath] = SubType.Create((S)patch.Value, node.Environment);
                     break;
 
                 case JsonPatchOperation.Remove:
@@ -226,7 +226,7 @@ namespace Skclusive.Mobx.StateTree
 
             foreach (var pair in snapshot)
             {
-                map[pair.Key] = SubType.Create(pair.Value, Node.Environment);
+                map[pair.Key] = SubType.Create(pair.Value, node.Environment);
                 keysmap[pair.Key] = true;
             }
 
@@ -284,7 +284,7 @@ namespace Skclusive.Mobx.StateTree
                     {
                         StateTreeUtils.Typecheck(SubType, change.NewValue.StoredValue);
 
-                        change.NewValue = SubType.Instantiate(node, change.Name, Node.Environment, change.NewValue.StoredValue);
+                        change.NewValue = SubType.Instantiate(node, change.Name, node.Environment, change.NewValue.StoredValue);
 
                         ProcessIdentifier(change.Name, change.NewValue);
                     }
@@ -358,7 +358,7 @@ namespace Skclusive.Mobx.StateTree
 
         public T Dehance(INode node)
         {
-            return (T)(Node?.Unbox(node) ?? node?.Value);
+            return node.Unbox<T>();
         }
 
         public object Enhance(object newv, object oldV, object name)

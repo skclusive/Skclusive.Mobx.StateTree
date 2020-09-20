@@ -16,7 +16,7 @@ namespace Skclusive.Mobx.StateTree
 
         protected Func<S> Snapshoty { set; get; }
 
-        protected ObjectNode Node { set; get; }
+        // protected ObjectNode Node { set; get; }
 
         public string IdentifierAttribute { get; private set; }
 
@@ -304,7 +304,7 @@ namespace Skclusive.Mobx.StateTree
         {
             var instance = node.StoredValue as IObservableObject<T, INode>;
 
-            Node = node as ObjectNode;
+            // Node = node as ObjectNode;
 
             if (instance != null)
             {
@@ -599,7 +599,25 @@ namespace Skclusive.Mobx.StateTree
 
         public object Dehance(INode node)
         {
-            return Node?.Unbox(node) ?? node.Value;
+            //if (node.Parent is ObjectNode parentNode)
+            //{
+            //    return (T)parentNode.Unbox(node);
+            //}
+            //else if (node is ObjectNode objectNode)
+            //{
+            //    return (T)objectNode.Unbox(node);
+            //}
+
+            if (node != null && node.Parent != null)
+            {
+                node.Parent.AssertAlive();
+            }
+
+            if (node != null && node.AutoUnbox)
+            {
+                return node.Value;
+            }
+            return node;
         }
 
         #endregion

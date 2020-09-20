@@ -17,7 +17,7 @@ namespace Skclusive.Mobx.StateTree
             SubType = subType;
         }
 
-        private ObjectNode Node { set; get; }
+        // private ObjectNode Node { set; get; }
 
         private IType<S, T> SubType { set; get; }
 
@@ -32,7 +32,7 @@ namespace Skclusive.Mobx.StateTree
         {
             var instance = GetValue(node);
 
-            Node = node;
+            //Node = node;
 
             instance.Intercept(change => WillChange(change));
 
@@ -101,7 +101,7 @@ namespace Skclusive.Mobx.StateTree
         {
             StateTreeUtils.Typecheck(this, snapshot);
 
-            var values = snapshot.Select(snap => SubType.Create(snap, Node.Environment)).ToArray();
+            var values = snapshot.Select(snap => SubType.Create(snap, node.Environment)).ToArray();
 
             GetValue(node).Replace(values);
         }
@@ -286,7 +286,7 @@ namespace Skclusive.Mobx.StateTree
 
         public T Dehance(INode node)
         {
-            return (T)(Node?.Unbox(node) ?? node.Value);
+            return node.Unbox<T>();
         }
 
         public object Enhance(object newv, object oldV, object name)
