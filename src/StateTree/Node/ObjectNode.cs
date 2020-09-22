@@ -123,8 +123,6 @@ namespace Skclusive.Mobx.StateTree
 
             StoredValue = createNewInstance(childNodes, meta);
 
-            NodeCache.Add(StoredValue, new StateTreeNode(this));
-
             PreBoot();
 
             PreCompute();

@@ -45,7 +45,9 @@ namespace Skclusive.Mobx.StateTree
         {
             return (object[] arguments) =>
             {
-                if (NodeCache.TryGetValue(target, out IStateTreeNode node))
+                IStateTreeNode node = target.GetStateTree();
+
+                if (node != null)
                 {
                     var id = GetNextActionId();
 
