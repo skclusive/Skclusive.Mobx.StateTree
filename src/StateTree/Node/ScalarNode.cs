@@ -23,8 +23,8 @@ namespace Skclusive.Mobx.StateTree
            ObjectNode parent, string subpath,
            IEnvironment environment,
            object initialSnapshot,
-           Func<object, object> createNewInstance,
-           Action<INode, object> finalizeNewInstance = null)
+           Func<object, IStateTreeNode, object> createNewInstance,
+           Action<INode, object, IStateTreeNode> finalizeNewInstance = null)
         {
             Type = type;
 
@@ -34,7 +34,9 @@ namespace Skclusive.Mobx.StateTree
 
             Subpath = subpath;
 
-            StoredValue = createNewInstance(initialSnapshot);
+            IStateTreeNode meta = new StateTreeNode(this);
+
+            StoredValue = createNewInstance(initialSnapshot, meta);
 
             AutoUnbox = true;
 
@@ -43,7 +45,7 @@ namespace Skclusive.Mobx.StateTree
             bool sawException = true;
             try
             {
-                finalizeNewInstance?.Invoke(this, initialSnapshot);
+                finalizeNewInstance?.Invoke(this, initialSnapshot, meta);
 
                 State = NodeLifeCycle.CREATED;
 

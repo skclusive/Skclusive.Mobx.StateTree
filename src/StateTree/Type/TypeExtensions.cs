@@ -43,17 +43,17 @@ namespace Skclusive.Mobx.StateTree
         public static INode CreateNode<S, T>(this IType type, ObjectNode parent, string subpath,
             IEnvironment environment, object initialValue)
         {
-            return type.CreateNode<S, T>(parent, subpath, environment, initialValue, (_) => (T)_);
+            return type.CreateNode<S, T>(parent, subpath, environment, initialValue, (child, node) => child);
         }
 
         public static INode CreateNode<S, T>(this IType<S, T> type, ObjectNode parent, string subpath,
-        IEnvironment environment, object initialValue, Func<object, object> createNewInstance, Action<INode, object> finalizeNewInstance = null)
+        IEnvironment environment, object initialValue, Func<object, IStateTreeNode, object> createNewInstance, Action<INode, object, IStateTreeNode> finalizeNewInstance = null)
         {
             return (type as IType).CreateNode<S, T>(parent, subpath, environment, initialValue, createNewInstance, finalizeNewInstance);
         }
 
         public static INode CreateNode<S, T>(this IType type, ObjectNode parent, string subpath, IEnvironment environment,
-            object initialValue, Func<object, object> createNewInstance, Action<INode, object> finalizeNewInstance = null)
+            object initialValue, Func<object, IStateTreeNode, object> createNewInstance, Action<INode, object, IStateTreeNode> finalizeNewInstance = null)
         {
             if (initialValue.IsStateTreeNode())
             {

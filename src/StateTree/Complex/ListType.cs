@@ -23,9 +23,9 @@ namespace Skclusive.Mobx.StateTree
 
         public override string Describe => $"{SubType.Describe}[]";
 
-        private IObservableList<INode, T> CreateNewInstance(IMap<string, INode> childNodes)
+        private IObservableList<INode, T> CreateNewInstance(IMap<string, INode> childNodes, IStateTreeNode meta)
         {
-            return ObservableList<INode, T>.FromIn(ConvertChildNodesToList(childNodes), null, this);
+            return ObservableList<INode, T>.FromIn(ConvertChildNodesToList(childNodes), null, this, meta);
         }
 
         private void FinalizeNewInstance(ObjectNode node)
@@ -41,7 +41,7 @@ namespace Skclusive.Mobx.StateTree
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
         {
-            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (childNodes) => CreateNewInstance(childNodes as IMap<string, INode>), (node, snapshot) => FinalizeNewInstance(node as ObjectNode));
+            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (childNodes, meta) => CreateNewInstance(childNodes as IMap<string, INode>, meta), (node, snapshot, meta) => FinalizeNewInstance(node as ObjectNode));
         }
 
         public override IMap<string, INode> InitializeChildNodes(INode node, object snapshot)

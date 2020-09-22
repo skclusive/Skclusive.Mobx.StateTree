@@ -109,12 +109,12 @@ namespace Skclusive.Mobx.StateTree
             {
                 DeterminIdentifierMode();
             }
-            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (childNodes) => CreateNewInstance(childNodes as IMap<string, INode>), (node, snapshot) => FinalizeNewInstance(node as ObjectNode));
+            return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (childNodes, meta) => CreateNewInstance(childNodes as IMap<string, INode>, meta), (node, snapshot, meta) => FinalizeNewInstance(node as ObjectNode));
         }
 
-        private IObservableMap<string, INode, T> CreateNewInstance(IMap<string, INode> childNodes)
+        private IObservableMap<string, INode, T> CreateNewInstance(IMap<string, INode> childNodes, IStateTreeNode meta)
         {
-            return ObservableMap<string, INode, T>.FromIn(childNodes, null, this);
+            return ObservableMap<string, INode, T>.FromIn(childNodes, null, this, meta);
             // addHiddenFinalProp(map, "put", put)
         }
 

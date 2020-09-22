@@ -268,7 +268,7 @@ namespace Skclusive.Mobx.StateTree
             // Optimization: record all prop- view- and action names after first construction, and generate an optimal base class
             // that pre-reserves all these fields for fast object-member lookups
             var snapshot = initialValue.IsStateTreeNode() ? initialValue : ApplySnapshotPreProcessor(initialValue);
-            return this.CreateNode(parent as ObjectNode, subpath, environment, snapshot, (childNodes) => CreateNewInstance(childNodes as IMap<string, INode>), (node, childNodes) => FinalizeNewInstance(node, childNodes as IMap<string, INode>));
+            return this.CreateNode(parent as ObjectNode, subpath, environment, snapshot, (childNodes, meta) => CreateNewInstance(childNodes as IMap<string, INode>, meta), (node, childNodes, meta) => FinalizeNewInstance(node, childNodes as IMap<string, INode>));
         }
 
         public override IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
@@ -285,7 +285,7 @@ namespace Skclusive.Mobx.StateTree
             });
         }
 
-        protected T CreateNewInstance(IMap<string, INode> childNodes)
+        protected T CreateNewInstance(IMap<string, INode> childNodes, IStateTreeNode meta)
         {
             var observables = Mutables.Select(mutable => new ObservableProperty { Type = mutable.Kind, Name = mutable.Name, Default = mutable.Default }).ToList();
 
@@ -295,7 +295,7 @@ namespace Skclusive.Mobx.StateTree
 
             ObservableTypeDef typeDef = new ObservableTypeDef(observables, computeds);
 
-            var instance = ObservableObject<T, INode>.FromAs(typeDef, Proxify, Name, this);
+            var instance = ObservableObject<T, INode>.FromAs(typeDef, Proxify, Name, this, meta);
 
             return instance;
         }

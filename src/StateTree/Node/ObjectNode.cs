@@ -62,8 +62,8 @@ namespace Skclusive.Mobx.StateTree
             ObjectNode parent, string subpath,
             IEnvironment environment,
             object initialSnapshot,
-            Func<object, object> createNewInstance,
-            Action<INode, object> finalizeNewInstance = null)
+            Func<object, IStateTreeNode, object> createNewInstance,
+            Action<INode, object, IStateTreeNode> finalizeNewInstance = null)
         {
             NodeId = ++NextNodeId;
 
@@ -119,7 +119,9 @@ namespace Skclusive.Mobx.StateTree
                 parent.Root.IdentifierCache.AddNodeToCache(this);
             }
 
-            StoredValue = createNewInstance(childNodes);
+            IStateTreeNode meta = new StateTreeNode(this);
+
+            StoredValue = createNewInstance(childNodes, meta);
 
             NodeCache.Add(StoredValue, new StateTreeNode(this));
 
@@ -132,7 +134,7 @@ namespace Skclusive.Mobx.StateTree
             {
                 _IsRunningAction = true;
 
-                finalizeNewInstance?.Invoke(this, childNodes);
+                finalizeNewInstance?.Invoke(this, childNodes, meta);
 
                 _IsRunningAction = false;
 
@@ -153,7 +155,7 @@ namespace Skclusive.Mobx.StateTree
 
             // NOTE: we need to touch snapshot, because non-observable
             // "observableInstanceCreated" field was touched
-            _Snapshot.TrackAndCompute();
+            // _Snapshot.TrackAndCompute();
 
             if (IsRoot)
             {
