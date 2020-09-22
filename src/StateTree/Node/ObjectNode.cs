@@ -99,7 +99,7 @@ namespace Skclusive.Mobx.StateTree
 
                 if (!string.IsNullOrWhiteSpace(IdentifierAttribute))
                 {
-                    Identifier = (string)StateTreeUtils.GetPropertyValue(initialSnapshot, IdentifierAttribute);
+                    Identifier = Convert.ToString(StateTreeUtils.GetPropertyValue(initialSnapshot, IdentifierAttribute));
                 }
             }
 
