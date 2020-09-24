@@ -93,7 +93,7 @@ namespace Skclusive.Mobx.StateTree
 
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
         {
-            if (typeof(I) != value.GetType())
+            if (value != null && typeof(I) != value.GetType())
             {
                return new IValidationError[]
                {
