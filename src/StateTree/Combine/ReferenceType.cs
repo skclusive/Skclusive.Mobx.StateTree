@@ -49,15 +49,22 @@ namespace Skclusive.Mobx.StateTree
 
             _resolvedValue = ComputedValue<object>.From(() =>
             {
+                var identifier = Value?.ToString();
+
+                if (string.IsNullOrWhiteSpace(identifier))
+                {
+                    return null;
+                }
+
                 // reference was initialized with the identifier of the target
-                var target = Node.Root.IdentifierCache?.Resolve(TargetType, Value.ToString());
+                var target = Node.Root.IdentifierCache?.Resolve(TargetType, identifier);
 
                 if (target == null)
                 {
-                    throw new Exception($"Failed to resolve reference '{Value}' to type '{TargetType.Name}' (from node: {Node.Path})");
+                   throw new Exception($"Failed to resolve reference '{identifier}' to type '{TargetType.Name}' (from node: {Node.Path})");
                 }
 
-                return target.Value;
+                return target?.Value;
             });
         }
 
@@ -167,6 +174,15 @@ namespace Skclusive.Mobx.StateTree
 
         public override INode Reconcile(INode current, object newValue)
         {
+            // custom changes start
+            if (newValue.IsStateTreeNode())
+            {
+                var node = newValue.GetStateTreeNode();
+
+                newValue = StateTreeUtils.GetPropertyValue(node.StoredValue, node.IdentifierAttribute);
+            }
+            //custom changes end
+
             if (current.Type == this)
             {
                 var targetMode = newValue.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier;
