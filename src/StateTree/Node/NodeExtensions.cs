@@ -82,13 +82,13 @@ namespace Skclusive.Mobx.StateTree
                                 // fall through
                             }
                         }
-                        catch (Exception ex)
+                        catch
                         {
                             if (!failIfResolveFails)
                             {
                                 return null;
                             }
-                            throw ex;
+                            throw;
                         }
                     }
 
