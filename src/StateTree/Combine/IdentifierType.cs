@@ -83,4 +83,11 @@ namespace Skclusive.Mobx.StateTree
         {
         }
     }
+
+    public class GuidIdentifierType : IdentifierType<Guid>
+    {
+        public GuidIdentifierType() : base("identifierGuid", new GuidType())
+        {
+        }
+    }
 }

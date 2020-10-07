@@ -87,9 +87,13 @@ namespace Skclusive.Mobx.StateTree
             Flags = TypeFlags.Reference;
 
             ShouldAttachNode = false;
+
+            ValueType = GetValueType<I>();
         }
 
         protected IType<S, T> TargetType { set; get; }
+
+        private Type ValueType { get; }
 
         public override string Describe => Name;
 
@@ -98,9 +102,21 @@ namespace Skclusive.Mobx.StateTree
             return TargetType.IsAssignableFrom(type);
         }
 
+        private static Type GetValueType<X>()
+        {
+            return GetValueType(typeof(X));
+        }
+
+        private static Type GetValueType(Type valueType)
+        {
+            var underlyingType = Nullable.GetUnderlyingType(valueType);
+
+            return underlyingType ?? valueType;
+        }
+
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
         {
-            if (value != null && typeof(I) != value.GetType())
+            if (value != null && (ValueType != GetValueType(value.GetType())))
             {
                return new IValidationError[]
                {
@@ -110,7 +126,7 @@ namespace Skclusive.Mobx.StateTree
 
                         Value = value,
 
-                        Message = $"Value is not a valid identifier, which is a {typeof(S).Name}"
+                        Message = $"Value {value} is not a valid identifier, which is a {typeof(I).Name}"
                     }
                };
             }
@@ -121,8 +137,11 @@ namespace Skclusive.Mobx.StateTree
 
     public class IdentifierReferenceType<I, S, T> : BaseReferenceType<I, S, T>
     {
-        public IdentifierReferenceType(IType<S, T> targetType) : base(targetType)
+        private Func<string, I> Converter;
+
+        public IdentifierReferenceType(IType<S, T> targetType, Func<string, I> converter) : base(targetType)
         {
+            Converter = converter;
         }
 
         public override T GetValue(INode node)
@@ -151,7 +170,7 @@ namespace Skclusive.Mobx.StateTree
             {
                 case StoreType.Object:
                     //storeRef.Value[storeRef.Value.GetStateTreeNode().IdentifierAttribute]
-                    return (I)(object)storeRef.Value.GetStateTreeNode().Identifier;
+                    return Converter(storeRef.Value.GetStateTreeNode().Identifier);
                 case StoreType.Identifier:
                     return (I)storeRef.Value;
             }

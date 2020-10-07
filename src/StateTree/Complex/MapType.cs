@@ -15,7 +15,7 @@ namespace Skclusive.Mobx.StateTree
         No
     }
 
-    public class MapType<S, T> : ComplexType<IMap<string, S>, IObservableMap<string, INode, T>>, IMapType, IManipulator<INode, T, string>
+    public class MapType<I, S, T> : ComplexType<IMap<I, S>, IObservableMap<I, INode, T>>, IMapType, IManipulator<INode, T, I>
     {
         private MapIdentifierMode IdentifierMode { set; get; }
 
@@ -23,9 +23,11 @@ namespace Skclusive.Mobx.StateTree
 
         //private ObjectNode Node { set; get; }
 
-        private IType<S, T> SubType { set; get; }
+        private IType<S, T> SubType { get; }
 
-        public MapType(string name, IType<S, T> subType) : base(name)
+        private Func<string, I> Converter { get; }
+
+        public MapType(string name, IType<S, T> subType, Func<string, I> converter) : base(name)
         {
             ShouldAttachNode = true;
 
@@ -33,12 +35,14 @@ namespace Skclusive.Mobx.StateTree
 
             SubType = subType;
 
+            Converter = converter;
+
             IdentifierMode = MapIdentifierMode.Unknown;
 
             DeterminIdentifierMode();
         }
 
-        public override string Describe => $"Map<string, {SubType.Describe}>";
+        public override string Describe => $"Map<{typeof(I).Name}, {SubType.Describe}>";
 
         IType IMapType.SubType => SubType;
 
@@ -81,7 +85,7 @@ namespace Skclusive.Mobx.StateTree
 
         public override IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
         {
-            IDictionary<string, S> values = snapshot as IDictionary<string, S>;
+            IDictionary<I, S> values = snapshot as IDictionary<I, S>;
 
             //if (snapshot is IDictionary<string, S> dictionary)
             //{
@@ -112,9 +116,13 @@ namespace Skclusive.Mobx.StateTree
             return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue, (childNodes, meta) => CreateNewInstance(childNodes as IMap<string, INode>, meta), (node, snapshot, meta) => FinalizeNewInstance(node as ObjectNode));
         }
 
-        private IObservableMap<string, INode, T> CreateNewInstance(IMap<string, INode> childNodes, IStateTreeNode meta)
+        private IObservableMap<I, INode, T> CreateNewInstance(IMap<string, INode> childNodes, IStateTreeNode meta)
         {
-            return ObservableMap<string, INode, T>.FromIn(childNodes, null, this, meta);
+            return ObservableMap<I, INode, T>.FromIn(childNodes.Aggregate(new Map<I, INode>(), (acc, pair) =>
+            {
+                acc[Converter(pair.Key)] = pair.Value;
+                return acc;
+            }), null, this, meta);
             // addHiddenFinalProp(map, "put", put)
         }
 
@@ -122,7 +130,7 @@ namespace Skclusive.Mobx.StateTree
         {
             var objNode = node;
 
-            var instance = objNode.StoredValue as IObservableMap<string, INode, T>;
+            var instance = objNode.StoredValue as IObservableMap<I, INode, T>;
 
             //Node = objNode;
 
@@ -131,9 +139,9 @@ namespace Skclusive.Mobx.StateTree
             instance.Observe(change => DidChange(change));
         }
 
-        public override IObservableMap<string, INode, T> GetValue(INode node)
+        public override IObservableMap<I, INode, T> GetValue(INode node)
         {
-            return node.StoredValue as IObservableMap<string, INode, T>;
+            return node.StoredValue as IObservableMap<I, INode, T>;
         }
 
         public override IReadOnlyCollection<INode> GetChildren(INode node)
@@ -143,7 +151,7 @@ namespace Skclusive.Mobx.StateTree
 
         public override INode GetChildNode(INode node, string key)
         {
-            return GetValue(node).GetValue(key);
+            return GetValue(node).GetValue(Converter(key));
         }
 
         public override IType GetChildType(string key)
@@ -151,13 +159,13 @@ namespace Skclusive.Mobx.StateTree
             return SubType;
         }
 
-        public override IMap<string, S> GetSnapshot(INode node, bool applyPostProcess)
+        public override IMap<I, S> GetSnapshot(INode node, bool applyPostProcess)
         {
-            IMap<string, S> snapshot = new Map<string, S>();
+            IMap<I, S> snapshot = new Map<I, S>();
 
             foreach (var cnode in GetChildren(node))
             {
-                snapshot[cnode.Subpath] = (S)cnode.Snapshot;
+                snapshot[Converter(cnode.Subpath)] = (S)cnode.Snapshot;
             }
 
             return snapshot;
@@ -165,17 +173,17 @@ namespace Skclusive.Mobx.StateTree
 
         public override void RemoveChild(INode node, string subpath)
         {
-            GetValue(node).Remove(subpath);
+            GetValue(node).Remove(Converter(subpath));
         }
 
-        protected override IMap<string, S> GetDefaultSnapshot()
+        protected override IMap<I, S> GetDefaultSnapshot()
         {
-            return new Map<string, S>();
+            return new Map<I, S>();
         }
 
         protected override IValidationError[] IsValidSnapshot(object values, IContextEntry[] context)
         {
-            if (values is IDictionary<string, S> dictionary)
+            if (values is IDictionary<I, S> dictionary)
             {
                 var errors = dictionary.Keys.Select(key => SubType.Validate(dictionary[key], StateTreeUtils.GetContextForPath(context, $"{key}", SubType)));
 
@@ -203,22 +211,22 @@ namespace Skclusive.Mobx.StateTree
             {
                 case JsonPatchOperation.Add:
                 case JsonPatchOperation.Replace:
-                    map[subpath] = SubType.Create((S)patch.Value, node.Environment);
+                    map[Converter(subpath)] = SubType.Create((S)patch.Value, node.Environment);
                     break;
 
                 case JsonPatchOperation.Remove:
-                    map.Remove(subpath);
+                    map.Remove(Converter(subpath));
                     break;
             }
         }
 
-        public override void ApplySnapshot(INode node, IMap<string, S> snapshot)
+        public override void ApplySnapshot(INode node, IMap<I, S> snapshot)
         {
             StateTreeUtils.Typecheck(this, snapshot);
 
             var map = GetValue(node);
 
-            var keysmap = map.Keys.Aggregate(new Map<string, bool>(), (acc, key) =>
+            var keysmap = map.Keys.Aggregate(new Map<I, bool>(), (acc, key) =>
             {
                 acc[key] = false;
                 return acc;
@@ -254,13 +262,13 @@ namespace Skclusive.Mobx.StateTree
             }
         }
 
-        private IMapWillChange<string, INode> WillChange(IMapWillChange<string, INode> change)
+        private IMapWillChange<I, INode> WillChange(IMapWillChange<I, INode> change)
         {
             var node = change.Object.GetStateTreeNode() as ObjectNode;
 
             node.AssertWritable();
 
-            var map = change.Object as IObservableMap<string, INode, T>;
+            var map = change.Object as IObservableMap<I, INode, T>;
 
             switch (change.Type)
             {
@@ -275,18 +283,18 @@ namespace Skclusive.Mobx.StateTree
 
                         StateTreeUtils.Typecheck(SubType, change.NewValue.StoredValue);
 
-                        change.NewValue = SubType.Reconcile(node.GetChildNode(change.Name), change.NewValue.StoredValue);
+                        change.NewValue = SubType.Reconcile(node.GetChildNode(change.Name.ToString()), change.NewValue.StoredValue);
 
-                        ProcessIdentifier(change.Name, change.NewValue);
+                        ProcessIdentifier(change.Name.ToString(), change.NewValue);
                     }
                     break;
                 case ChangeType.ADD:
                     {
                         StateTreeUtils.Typecheck(SubType, change.NewValue.StoredValue);
 
-                        change.NewValue = SubType.Instantiate(node, change.Name, node.Environment, change.NewValue.StoredValue);
+                        change.NewValue = SubType.Instantiate(node, change.Name.ToString(), node.Environment, change.NewValue.StoredValue);
 
-                        ProcessIdentifier(change.Name, change.NewValue);
+                        ProcessIdentifier(change.Name.ToString(), change.NewValue);
                     }
                     break;
             }
@@ -294,7 +302,7 @@ namespace Skclusive.Mobx.StateTree
             return change;
         }
 
-        private void DidChange(IMapDidChange<string, INode> change)
+        private void DidChange(IMapDidChange<I, INode> change)
         {
             var node = change.Object.GetStateTreeNode() as ObjectNode;
 
@@ -306,7 +314,7 @@ namespace Skclusive.Mobx.StateTree
                     {
                         Operation = JsonPatchOperation.Replace,
 
-                        Path = change.Name.EscapeJsonPath(),
+                        Path = change.Name.ToString().EscapeJsonPath(),
 
                         Value = change.NewValue.Snapshot,
 
@@ -321,7 +329,7 @@ namespace Skclusive.Mobx.StateTree
                     {
                         Operation = JsonPatchOperation.Add,
 
-                        Path = change.Name.EscapeJsonPath(),
+                        Path = change.Name.ToString().EscapeJsonPath(),
 
                         Value = change.NewValue.Snapshot
 
@@ -340,7 +348,7 @@ namespace Skclusive.Mobx.StateTree
                     {
                         Operation = JsonPatchOperation.Remove,
 
-                        Path = change.Name.EscapeJsonPath(),
+                        Path = change.Name.ToString().EscapeJsonPath(),
 
                         OldValue = oldSnapshot
 
@@ -392,7 +400,7 @@ namespace Skclusive.Mobx.StateTree
             };
         }
 
-        public INode Enhance(INode newv, INode oldV, string name)
+        public INode Enhance(INode newv, INode oldV, I name)
         {
             return newv;
         }
@@ -423,6 +431,14 @@ namespace Skclusive.Mobx.StateTree
                     TryCollectObjectType(subtype, objectTypes);
                 }
             }
+        }
+    }
+
+
+    public class MapType<S, T> : MapType<string, S, T>
+    {
+        public MapType(string name, IType<S, T> subType) : base(name, subType, (value) => value)
+        {
         }
     }
 }

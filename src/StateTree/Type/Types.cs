@@ -38,7 +38,11 @@ namespace Skclusive.Mobx.StateTree
 
         public readonly static ISimpleType<double> Double = new DoubleType();
 
+        public readonly static ISimpleType<float> Float = new FloatType();
+
         public readonly static ISimpleType<int> Int = new IntType();
+
+        public readonly static ISimpleType<Guid> Guid = new GuidType();
 
         /**
          * Creates a type that can only contain a boolean value.
@@ -97,6 +101,8 @@ namespace Skclusive.Mobx.StateTree
         * @returns {IType<T, T>}
         */
         public readonly static IType<int, int> IdentifierInt = new IntIdentifierType();
+
+        public readonly static IType<Guid, Guid> IdentifierGuid = new GuidIdentifierType();
 
         public static ISimpleType<object> GetPrimitiveFactoryFromValue(object value)
         {
@@ -201,12 +207,12 @@ namespace Skclusive.Mobx.StateTree
 
         public static IType<string, T> Reference<S, T>(IType<S, T> targetType)
         {
-            return new IdentifierReferenceType<string, S, T>(targetType);
+            return new IdentifierReferenceType<string, S, T>(targetType, v => v);
         }
 
-        public static IType<I, T> Reference<I, S, T>(IType<S, T> targetType)
+        public static IType<I, T> Reference<I, S, T>(IType<S, T> targetType, Func<string, I> converter)
         {
-            return new IdentifierReferenceType<I, S, T>(targetType);
+            return new IdentifierReferenceType<I, S, T>(targetType, converter);
         }
 
         public static IType<int, T> Reference<T>(IType<int, T> targetType, IReferenceOptions<int, T> options)
@@ -232,6 +238,11 @@ namespace Skclusive.Mobx.StateTree
         public static IType<IMap<string, S>, IObservableMap<string, INode, T>> Map<S, T>(IType<S, T> subtype)
         {
             return new MapType<S, T>($"Map<string, {subtype.Name}>", subtype);
+        }
+
+        public static IType<IMap<I, S>, IObservableMap<I, INode, T>> Map<I, S, T>(IType<S, T> subtype, Func<string, I> converter)
+        {
+            return new MapType<I, S, T>($"Map<{typeof(I).Name}, {subtype.Name}>", subtype, converter);
         }
 
         public static IObjectType<S, T> Object<S, T>(string name) where S : class
