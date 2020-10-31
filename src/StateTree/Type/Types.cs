@@ -1,4 +1,5 @@
-﻿using Skclusive.Mobx.Observable;
+﻿using Skclusive.Core.Collection;
+using Skclusive.Mobx.Observable;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -100,9 +101,9 @@ namespace Skclusive.Mobx.StateTree
         * @template T
         * @returns {IType<T, T>}
         */
-        public readonly static IType<int, int> IdentifierInt = new IntIdentifierType();
+        public readonly static IIdentifierType<int> IdentifierInt = new IntIdentifierType();
 
-        public readonly static IType<Guid, Guid> IdentifierGuid = new GuidIdentifierType();
+        public readonly static IIdentifierType<Guid> IdentifierGuid = new GuidIdentifierType();
 
         public static ISimpleType<object> GetPrimitiveFactoryFromValue(object value)
         {

@@ -1,3 +1,4 @@
+using Skclusive.Core.Collection;
 using Skclusive.Mobx.Observable;
 using Skclusive.Mobx.StateTree;
 using System;
@@ -62,7 +63,7 @@ namespace Skclusive.Mobx.StateTree.Tests
                         Object<IUserListStoreSnapshot, IUserListStore>("UserListStore")
                        .Proxy(x => new UserListStoreProxy(x))
                        .Snapshot(() => new UserListStoreSnapshot())
-                       .Mutable(o => o.User, Types.Reference<string, IUserSnapshot, IUser>(UserType))
+                       .Mutable(o => o.User, Types.Reference<IUserSnapshot, IUser>(UserType))
                        .Mutable(o => o.Users, Types.List(UserType));
     }
 }

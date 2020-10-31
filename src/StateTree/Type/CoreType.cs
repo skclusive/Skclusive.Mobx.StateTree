@@ -22,7 +22,7 @@ namespace Skclusive.Mobx.StateTree
 
         public Func<object, IStateTreeNode, object> Initializer { get; private set; }
 
-        public override string Describe { get => Name; }
+        public override string Describe => Name;
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object snapshot)
         {

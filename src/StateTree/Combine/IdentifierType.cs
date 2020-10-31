@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Skclusive.Mobx.StateTree
 {
-    public class IdentifierType<T> : Type<T, T>
+    public class IdentifierType<T> : Type<T, T>, IIdentifierType<T>
     {
         public IdentifierType(string name, IType<T, T> type) : base(name)
         {

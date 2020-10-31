@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Skclusive.Core.Collection;
+using System;
 using System.Collections.Generic;
 using Skclusive.Mobx.Observable;
 
@@ -160,6 +161,10 @@ namespace Skclusive.Mobx.StateTree
     }
 
     public interface IComplexType<S, T> : IType<S, T> // where T : IStateTreeNode, ISnapshottable<S>
+    {
+    }
+
+    public interface IIdentifierType<T> : IType<T, T>
     {
     }
 }
