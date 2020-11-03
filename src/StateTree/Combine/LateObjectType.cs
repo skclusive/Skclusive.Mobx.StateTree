@@ -6,7 +6,7 @@ using Skclusive.Mobx.Observable;
 
 namespace Skclusive.Mobx.StateTree
 {
-    public class LateObjectType<S, T> : IObjectType<S, T>
+    public class LateObjectType<S, T> : IObjectType<S, T>, ILateType
     {
         public string Name { set; get; }
 
@@ -66,6 +66,8 @@ namespace Skclusive.Mobx.StateTree
         object IType.SnapshotType => ((IType)SubType).SnapshotType;
 
         public string IdentifierAttribute => SubType.IdentifierAttribute;
+
+        IType ILateType.SubType => SubType;
 
         public IObjectType<S, T> Include<Sx, Tx>(IObjectType<Sx, Tx> type)
         {

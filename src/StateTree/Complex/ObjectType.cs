@@ -52,7 +52,10 @@ namespace Skclusive.Mobx.StateTree
 
         private string FindIdentifierAttribute()
         {
-            var identifiers = Properties.Where(property => property.Value.Flags == TypeFlags.Identifier).Select(property => property.Key);
+            var identifiers = Properties
+                // not to evaluate late types. Late types may not be Identifier type
+                .Where(property => !(property.Value is ILateType))
+                .Where(property => property.Value.Flags == TypeFlags.Identifier).Select(property => property.Key);
 
             var identifierAttribute = "";
 
@@ -227,7 +230,7 @@ namespace Skclusive.Mobx.StateTree
         {
             var value = ApplySnapshotPreProcessor(snapshot);
 
-            if (value != null && !(value is S))
+            if (value == null || value != null && !(value is S))
             {
                 return new IValidationError[]
                 {
