@@ -39,6 +39,10 @@ namespace Skclusive.Mobx.StateTree
 
             Views = config.Views;
 
+            Hooks = config.Hooks;
+
+            Volatiles = config.Volatiles;
+
             Actions = config.Actions;
 
             Proxify = config.Proxify;
@@ -76,7 +80,11 @@ namespace Skclusive.Mobx.StateTree
 
         public IReadOnlyDictionary<string, IType> Properties { private set; get; } = new Dictionary<string, IType>();
 
+        public IReadOnlyDictionary<Hook, List<Action<object[]>>> Hooks { set; get; } = new Dictionary<Hook, List<Action<object[]>>>();
+
         public IReadOnlyCollection<IMutableProperty> Mutables { private set; get; } = new List<IMutableProperty>();
+
+        public IReadOnlyCollection<IVolatileProperty> Volatiles { private set; get; } = new List<IVolatileProperty>();
 
         public IReadOnlyCollection<IViewProperty> Views { private set; get; } = new List<IViewProperty>();
 
@@ -187,7 +195,7 @@ namespace Skclusive.Mobx.StateTree
 
             if (applyPostProcess && node.StoredValue is IDictionary<string, object> svalue)
             {
-                Func<object, object> action = svalue[Hooks.PostProcessSnapshot.ToString()] as Func<object, object>;
+                Func<object, object> action = svalue[StateTree.Hook.PostProcessSnapshot.ToString()] as Func<object, object>;
 
                 if (action != null)
                 {
@@ -293,11 +301,13 @@ namespace Skclusive.Mobx.StateTree
         {
             var observables = Mutables.Select(mutable => new ObservableProperty { Type = mutable.Kind, Name = mutable.Name, Default = mutable.Default }).ToList();
 
+            var volatiles = Volatiles.Select(xvolatile => new Observable.VolatileProperty { Type = xvolatile.Kind, Name = xvolatile.Name, Default = xvolatile.Default }).ToList();
+
             var computeds = Views.Select(view => new ComputedProperty { Type = view.Kind, Name = view.Name, Compute = view.View }).ToList();
 
             // var actions = Actions.Select(action => new ActionMethod { Name = action.Name, Action = action.Action });
 
-            ObservableTypeDef typeDef = new ObservableTypeDef(observables, computeds);
+            ObservableTypeDef typeDef = new ObservableTypeDef(observables, volatiles, computeds);
 
             var instance = ObservableObject<T, INode>.FromAs(typeDef, Proxify, Name, this, meta);
 
@@ -328,6 +338,19 @@ namespace Skclusive.Mobx.StateTree
                     {
                         observable.AddAction(action.Name, StateTreeAction.CreateActionInvoker(instance, action.Name, action.Action));
                     }
+
+                    foreach (var hook in Hooks)
+                    {
+                        var hookAction = (Action<object[]>)Delegate.Combine(hook.Value.ToArray());
+
+                        observable.AddAction(hook.Key.ToString(), Observable.Actions.CreateAction(hook.Key.ToString(), (arguments) =>
+                        {
+                            hookAction(new object[] { instance }.Concat(arguments).ToArray());
+                            return null;
+                        }));
+                    }
+
+                    //Actions.RunInAction(call.Name, action, new object[] { call.Target }.Concat(call.Arguments).ToArray())
                 }
 
                 instance.Intercept(change => WillChange(change));
@@ -396,7 +419,22 @@ namespace Skclusive.Mobx.StateTree
 
         public I Include<Sx, Tx>(IObjectType<Sx, Tx> type)
         {
-            return EnhanceWith(new ObjectTypeConfig<S, T> { Name = type.Name, Initializers = type.Initializers, Mutables = type.Mutables, Actions = type.Actions, Properties = type.Properties, Views = type.Views });
+            return EnhanceWith(new ObjectTypeConfig<S, T>
+            {
+                Name = type.Name,
+
+                Initializers = type.Initializers,
+
+                Mutables = type.Mutables,
+
+                Volatiles = type.Volatiles,
+
+                Actions = type.Actions,
+
+                Hooks = type.Hooks,
+
+                Views = type.Views
+            });
         }
 
         public I Snapshot(Func<S> snpashoty)
@@ -416,6 +454,42 @@ namespace Skclusive.Mobx.StateTree
             };
 
             return EnhanceWith(new ObjectTypeConfig<S, T> { PreProcessor = preProcessor });
+        }
+
+        public I Hook(Hook hook, Action<T> action)
+        {
+            return EnhanceWith(new ObjectTypeConfig<S, T>
+            {
+                Hooks = new Dictionary<Hook, List<Action<object[]>>>
+                {
+                    { hook, new List<Action<object[]>>{ action.Pack() } }
+                }
+            });
+        }
+
+        public I Volatile<V>(Expression<Func<T, V>> expression, V defaultValue = default)
+        {
+            var property = ExpressionUtils.GetPropertySymbol(expression);
+
+            return Volatile(property, defaultValue);
+        }
+
+        public I Volatile<V>(string property, V defaultValue = default)
+        {
+            return EnhanceWith(new ObjectTypeConfig<S, T>
+            {
+                Volatiles = new IVolatileProperty[]
+                {
+                    new VolatileProperty
+                    {
+                        Name = property,
+
+                        Default = defaultValue,
+
+                        Kind = typeof(V),
+                    }
+                }
+            });
         }
 
         public I Mutable<P>(Expression<Func<T, P>> expression, IType type, P defaultValue = default(P))
@@ -549,13 +623,22 @@ namespace Skclusive.Mobx.StateTree
             {
                 Name = config.Name ?? Name,
 
+                Hooks = new[] { Hooks, config.Hooks }
+                        .SelectMany(d => d)
+                        .GroupBy
+                        (
+                            kvp => kvp.Key,
+                            (key, kvps) => new { Key = key, Value = kvps.SelectMany(x => x.Value).ToList() }
+                        )
+                        .ToDictionary(x => x.Key, y => y.Value),
+
                 Mutables = config.Mutables.Concat(Mutables).ToList(),
+
+                Volatiles = config.Volatiles.Concat(Volatiles).ToList(),
 
                 Views = Views.Concat(config.Views).Distinct().ToList(),
 
                 Actions = Actions.Concat(config.Actions).Distinct().ToList(),
-
-                Properties = Properties.Concat(config.Properties).Distinct().ToDictionary(x => x.Key, y => y.Value),
 
                 Initializers = config.Initializers.Concat(Initializers).ToList(),
 

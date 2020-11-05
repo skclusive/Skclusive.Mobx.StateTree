@@ -43,6 +43,8 @@ namespace Skclusive.Mobx.StateTree
 
         public IReadOnlyDictionary<string, IType> Properties => SubType.Properties;
 
+        public IReadOnlyDictionary<Hook, List<Action<object[]>>> Hooks => SubType.Hooks;
+
         public IReadOnlyCollection<IMutableProperty> Mutables => SubType.Mutables;
 
         public IReadOnlyCollection<IViewProperty> Views => SubType.Views;
@@ -68,6 +70,8 @@ namespace Skclusive.Mobx.StateTree
         public string IdentifierAttribute => SubType.IdentifierAttribute;
 
         IType ILateType.SubType => SubType;
+
+        public IReadOnlyCollection<IVolatileProperty> Volatiles => SubType.Volatiles;
 
         public IObjectType<S, T> Include<Sx, Tx>(IObjectType<Sx, Tx> type)
         {
@@ -97,6 +101,16 @@ namespace Skclusive.Mobx.StateTree
         public IObjectType<S, T> Mutable<P>(Expression<Func<T, P>> expression, IType type, P defaultValue = default)
         {
             return SubType.Mutable(expression, type, defaultValue);
+        }
+
+        public IObjectType<S, T> Hook(Hook hook, Action<T> action)
+        {
+             return SubType.Hook(hook, action);
+        }
+
+        public IObjectType<S, T> Volatile<V>(Expression<Func<T, V>> expression, V defaultValue = default)
+        {
+            return SubType.Volatile(expression, defaultValue);
         }
 
         public IObjectType<S, T> View<P>(Expression<Func<T, P>> expression, IType type, Func<T, P> view)
@@ -247,6 +261,11 @@ namespace Skclusive.Mobx.StateTree
         public IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
         {
             return SubType.InitializeChildNodes(node, snapshot);
+        }
+
+        public IObjectType<S, T> Volatile<V>(string name, V defaultValue = default)
+        {
+            return SubType.Volatile(name, defaultValue);
         }
     }
 }

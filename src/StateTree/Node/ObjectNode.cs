@@ -90,6 +90,8 @@ namespace Skclusive.Mobx.StateTree
 
             AutoUnbox = true;
 
+            PreBoot();
+
             if (type is IObjectType objectType)
             {
                 IdentifierAttribute = objectType.IdentifierAttribute;
@@ -123,7 +125,7 @@ namespace Skclusive.Mobx.StateTree
 
             StoredValue = createNewInstance(childNodes, meta);
 
-            PreBoot();
+            PostBoot();
 
             PreCompute();
 
@@ -136,7 +138,7 @@ namespace Skclusive.Mobx.StateTree
 
                 _IsRunningAction = false;
 
-                FireHook("afterCreate");
+                FireHook(Hook.AfterCreate);
 
                 State = NodeLifeCycle.CREATED;
 
@@ -248,7 +250,10 @@ namespace Skclusive.Mobx.StateTree
             SnapshotSubscribers = new List<Action<object>>();
 
             PatchSubscribers = new List<Action<IJsonPatch, IJsonPatch>>();
+        }
 
+        private void PostBoot()
+        {
             _ApplyPatches = StateTreeAction.CreateActionInvoker<IJsonPatch[]>
             (
                 StoredValue, "@APPLY_PATCHES",
@@ -305,22 +310,6 @@ namespace Skclusive.Mobx.StateTree
 
                 return _Snapshot.Value;
             }
-        }
-
-        private string FromStored(string attribute)
-        {
-            if (StoredValue is IDictionary dictionary)
-            {
-                return (string)dictionary[attribute];
-            }
-            else if (StoredValue is IObservableObject observableObject)
-            {
-                if (observableObject.TryRead(attribute, out object value))
-                {
-                    return (string)value;
-                }
-            }
-            return null;
         }
 
         public bool IsRunningAction
@@ -390,21 +379,22 @@ namespace Skclusive.Mobx.StateTree
 
                     SubpathAtom.ReportChanged();
 
-                    FireHook("afterAttach");
+                    FireHook(Hook.AfterAttach);
                 }
             }
         }
 
-        protected void FireHook(string name)
+        protected void FireHook(Hook hook)
         {
-            object action = FromStored(name);
-            if (action is Func<object, object>)
+            if (StoredValue is IObservableObject observableObject)
             {
-                (action as Func<object, object>).Invoke(StoredValue);
-            }
-            else if (action is Action<object>)
-            {
-                (action as Action<object>).Invoke(StoredValue);
+                var lastIsRunningAction = _IsRunningAction;
+
+                _IsRunningAction = true;
+
+                observableObject.TryInvokeAction(hook.ToString(), Array.Empty<object>(), out _);
+
+                _IsRunningAction = lastIsRunningAction;
             }
         }
 
@@ -493,7 +483,7 @@ namespace Skclusive.Mobx.StateTree
                         // parent not ready yet, postpone
                         return;
                     }
-                    FireHook("afterAttach");
+                    FireHook(Hook.AfterAttach);
                 }
 
                 State = NodeLifeCycle.FINALIZED;
@@ -517,7 +507,7 @@ namespace Skclusive.Mobx.StateTree
 
             if (!IsRoot)
             {
-                FireHook("beforeDetach");
+                FireHook(Hook.BeforeDetach);
 
                 Environment = Root.Environment; // make backup of environment
 
@@ -572,7 +562,7 @@ namespace Skclusive.Mobx.StateTree
                 disposer();
             }
 
-            FireHook("beforeDestroy");
+            FireHook(Hook.BeforeDestroy);
         }
 
         public void FinalizeDeath()

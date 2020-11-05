@@ -41,6 +41,22 @@ namespace Skclusive.Mobx.StateTree
             return node.AddMiddleware(handler, includeHooks);
         }
 
+        public static Func<object[], object> CreateHookInvoker(object target, string name, Func<object[], object> action)
+        {
+            return (object[] arguments) =>
+            {
+                IStateTreeNode node = target.GetStateTree();
+
+                if (node != null)
+                {
+                    return Actions.RunInAction(name, action, new object[] { target }.Concat(arguments).ToArray());
+                }
+
+                throw new Exception($"Target does have associated node {target}");
+            };
+        }
+
+
         public static Func<object[], object> CreateActionInvoker(object target, string name, Func<object[], object> action)
         {
             return (object[] arguments) =>
@@ -185,7 +201,7 @@ namespace Skclusive.Mobx.StateTree
                     }
                     else
                     {
-                        if (Enum.TryParse(call.Name, out Hooks hook))
+                        if (Enum.TryParse(call.Name, out Hook hook))
                         {
                             return RunMiddlewares(call);
                         }
