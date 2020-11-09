@@ -169,6 +169,11 @@ namespace Skclusive.Mobx.StateTree
             return Union<S, T>(OptionalNull, type);
         }
 
+        public static IType<Nullable<T>, Nullable<T>> Maybe<T>(ISimpleType<T> type) where T : struct
+        {
+            return Union<Nullable<T>, Nullable<T>>(OptionalNull, type);
+        }
+
         public static ISimpleType<T> Literal<T>(T value)
         {
             if (!(value is string || value.GetType().IsPrimitive || value.GetType().IsEnum))

@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <VersionPrefix>5.0.0-rc3</VersionPrefix>
+    <VersionPrefix>5.0.0-rc4</VersionPrefix>
     <VersionSuffix>$(VersionSuffix)</VersionSuffix>
     <TargetFramework>net5.0</TargetFramework>
     <AssemblyName>Skclusive.Mobx.StateTree</AssemblyName>
@@ -19,9 +19,9 @@
     <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
   </ItemGroup>
  <ItemGroup>
-    <PackageReference Include="Skclusive.Mobx.Observable" Version="5.0.0-rc3" />
+    <PackageReference Include="Skclusive.Mobx.Observable" Version="5.0.0-rc4" />
   </ItemGroup>
   <!-- <ItemGroup>
-    <ProjectReference Include="..\..\Skclusive.Mobx.Observable\src\Observable.csproj" Version="5.0.0-rc3" />
+    <ProjectReference Include="..\..\Skclusive.Mobx.Observable\src\Observable.csproj" Version="5.0.0-rc4" />
   </ItemGroup> -->
 </Project>
