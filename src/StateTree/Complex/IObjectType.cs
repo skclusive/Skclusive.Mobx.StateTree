@@ -5,13 +5,22 @@ using System.Linq.Expressions;
 
 namespace Skclusive.Mobx.StateTree
 {
-    public interface IObjectType<S, T, I> : IComplexType<S, T>
+    public interface IObjectType : IType
+    {
+        string IdentifierAttribute { get; }
+    }
+
+    public interface IObjectType<S, T, I> : IComplexType<S, T>, IObjectType
     {
         IReadOnlyCollection<Func<object, object>> Initializers { get; }
 
         IReadOnlyDictionary<string, IType> Properties { get; }
 
+        IReadOnlyDictionary<Hook, List<Action<object[]>>> Hooks { get; }
+
         IReadOnlyCollection<IMutableProperty> Mutables { get; }
+
+        IReadOnlyCollection<IVolatileProperty> Volatiles { get; }
 
         IReadOnlyCollection<IViewProperty> Views { get; }
 
@@ -27,7 +36,13 @@ namespace Skclusive.Mobx.StateTree
 
         I PreProcessSnapshot(Func<object, S> fn);
 
-        I Mutable<P>(Expression<Func<T, P>> expression, IType type, P defaultValue = default(P));
+        I Hook(Hook hook, Action<T> action);
+
+        I Volatile<V>(string name, V defaultValue = default);
+
+        I Volatile<V>(Expression<Func<T, V>> expression, V defaultValue = default);
+
+        I Mutable<P>(Expression<Func<T, P>> expression, IType type, P defaultValue = default);
 
         I View<P>(Expression<Func<T, P>> expression, IType type, Func<T, P> view);
 

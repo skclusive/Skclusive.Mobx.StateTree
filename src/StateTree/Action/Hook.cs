@@ -1,6 +1,6 @@
 ﻿namespace Skclusive.Mobx.StateTree
 {
-    public enum Hooks
+    public enum Hook
     {
         AfterCreate,
 

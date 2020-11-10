@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Skclusive.Mobx.Observable;
 
 namespace Skclusive.Mobx.StateTree
 {
@@ -17,11 +18,19 @@ namespace Skclusive.Mobx.StateTree
 
         public object Value { private set; get; }
 
-        internal StoredReference(StoreType type, object value)
+        public INode Node { set; get; }
+
+        public IType TargetType { private set; get; }
+
+        private IComputedValue<object> _resolvedValue;
+
+        internal StoredReference(StoreType type, object value, IType targetType)
         {
             Type = type;
 
             Value = value;
+
+            TargetType = targetType;
 
             if (Type == StoreType.Object)
             {
@@ -37,10 +46,39 @@ namespace Skclusive.Mobx.StateTree
                     throw new ArgumentException("Can only store references with a defined identifier attribute.");
                 }
             }
+
+            _resolvedValue = ComputedValue<object>.From(() =>
+            {
+                var identifier = Value?.ToString();
+
+                if (string.IsNullOrWhiteSpace(identifier))
+                {
+                    return null;
+                }
+
+                // reference was initialized with the identifier of the target
+                var target = Node.Root.IdentifierCache?.Resolve(TargetType, identifier);
+
+                if (target == null)
+                {
+                   throw new Exception($"Failed to resolve reference '{identifier}' to type '{TargetType.Name}' (from node: {Node.Path})");
+                }
+
+                return target?.Value;
+            });
+        }
+
+        public object ResolvedValue
+        {
+            get
+            {
+                //_resolvedValue.TrackAndCompute();
+                return _resolvedValue.Value;
+            }
         }
     }
 
-    public abstract class BaseReferenceType<S, T> : Type<S, T>
+    public abstract class BaseReferenceType<I, S, T> : Type<I, T>
     {
         protected BaseReferenceType(IType<S, T> targetType) : base($"reference(${ targetType.Name})")
         {
@@ -49,9 +87,13 @@ namespace Skclusive.Mobx.StateTree
             Flags = TypeFlags.Reference;
 
             ShouldAttachNode = false;
+
+            ValueType = GetValueType<I>();
         }
 
         protected IType<S, T> TargetType { set; get; }
+
+        private Type ValueType { get; }
 
         public override string Describe => Name;
 
@@ -60,11 +102,23 @@ namespace Skclusive.Mobx.StateTree
             return TargetType.IsAssignableFrom(type);
         }
 
+        private static Type GetValueType<X>()
+        {
+            return GetValueType(typeof(X));
+        }
+
+        private static Type GetValueType(Type valueType)
+        {
+            var underlyingType = Nullable.GetUnderlyingType(valueType);
+
+            return underlyingType ?? valueType;
+        }
+
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
         {
-            if (typeof(S) != value.GetType())
+            if (value != null && (ValueType != GetValueType(value.GetType())))
             {
-                return new IValidationError[]
+               return new IValidationError[]
                {
                     new ValidationError
                     {
@@ -72,7 +126,7 @@ namespace Skclusive.Mobx.StateTree
 
                         Value = value,
 
-                        Message = $"Value is not a valid identifier, which is a {typeof(S).Name}"
+                        Message = $"Value {value} is not a valid identifier, which is a {typeof(I).Name}"
                     }
                };
             }
@@ -81,17 +135,20 @@ namespace Skclusive.Mobx.StateTree
         }
     }
 
-    public class IdentifierReferenceType<S, T> : BaseReferenceType<S, T>
+    public class IdentifierReferenceType<I, S, T> : BaseReferenceType<I, S, T>
     {
-        public IdentifierReferenceType(IType<S, T> targetType) : base(targetType)
+        private Func<string, I> Converter;
+
+        public IdentifierReferenceType(IType<S, T> targetType, Func<string, I> converter) : base(targetType)
         {
+            Converter = converter;
         }
 
         public override T GetValue(INode node)
         {
             if (!node.IsAlive)
             {
-                return default(T);
+                return default;
             }
 
             var storeRef = node.StoredValue as StoredReference;
@@ -102,27 +159,20 @@ namespace Skclusive.Mobx.StateTree
                 return (T)storeRef.Value;
             }
 
-            // reference was initialized with the identifier of the target
-            var target = node.Root.IdentifierCache?.Resolve(TargetType, (string)storeRef.Value);
-
-            if (target == null)
-            {
-                throw new Exception($"Failed to resolve reference '{storeRef.Value}' to type '{TargetType.Name}' (from node: {node.Path})");
-            }
-
-            return (T)target.Value;
+            return (T)storeRef.ResolvedValue;
         }
 
-        public override S GetSnapshot(INode node, bool applyPostProcess)
+        public override I GetSnapshot(INode node, bool applyPostProcess)
         {
             var storeRef = node.StoredValue as StoredReference;
 
             switch (storeRef.Type)
             {
                 case StoreType.Object:
-                    return (S)(object)storeRef.Value.GetStateTreeNode().Identifier;
+                    //storeRef.Value[storeRef.Value.GetStateTreeNode().IdentifierAttribute]
+                    return Converter(storeRef.Value.GetStateTreeNode().Identifier);
                 case StoreType.Identifier:
-                    return (S)storeRef.Value;
+                    return (I)storeRef.Value;
             }
 
             throw new Exception("Failed to get snapshot");
@@ -130,11 +180,28 @@ namespace Skclusive.Mobx.StateTree
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object snapshot)
         {
-            return this.CreateNode(parent as ObjectNode, subpath, environment, new StoredReference(snapshot.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier, snapshot));
+            var storeType = snapshot.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier;
+
+            StoredReference storedReference;
+
+            var node = this.CreateNode<string, StoredReference>(parent as ObjectNode, subpath, environment, storedReference = new StoredReference(storeType, snapshot, TargetType));
+
+            storedReference.Node = node;
+
+            return node;
         }
 
         public override INode Reconcile(INode current, object newValue)
         {
+            // custom changes start
+            if (newValue.IsStateTreeNode())
+            {
+                var node = newValue.GetStateTreeNode();
+
+                newValue = StateTreeUtils.GetPropertyValue(node.StoredValue, node.IdentifierAttribute);
+            }
+            //custom changes end
+
             if (current.Type == this)
             {
                 var targetMode = newValue.IsStateTreeNode() ? StoreType.Object : StoreType.Identifier;
@@ -162,7 +229,7 @@ namespace Skclusive.Mobx.StateTree
         S SetReference(T value, IStateTreeNode parent);
     }
 
-    public class CustomReferenceType<S, T> : BaseReferenceType<S, T>
+    public class CustomReferenceType<S, T> : BaseReferenceType<S, S, T>
     {
         public CustomReferenceType(IType<S, T> targetType, IReferenceOptions<S, T> options) : base(targetType)
         {

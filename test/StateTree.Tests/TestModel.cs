@@ -1,63 +1,18 @@
 ﻿using Skclusive.Mobx.Observable;
 using System.Collections.Generic;
 using Xunit;
+using static Skclusive.Mobx.StateTree.Tests.TestTypes;
 
 namespace Skclusive.Mobx.StateTree.Tests
 {
-    #region IModel
-
-    public interface IModelSnapshot
-    {
-        string To { set; get; }
-    }
-
-    public interface IModel : IModelSnapshot
-    {
-        void SetTo(string to);
-    }
-
-    internal class ModelSnapshot : IModelSnapshot
-    {
-        public string To { set; get; }
-    }
-
-    internal class ModelProxy : ObservableProxy<IModel, INode>, IModel
-    {
-        public override IModel Proxy => this;
-
-        public ModelProxy(IObservableObject<IModel, INode> target) : base(target)
-        {
-        }
-
-        public string To
-        {
-            get => Read<string>(nameof(To));
-            set => Write(nameof(To), value);
-        }
-
-        public void SetTo(string to)
-        {
-            (Target as dynamic).SetTo(to);
-        }
-    }
-
-    #endregion
-
     public class TestModel
     {
-        private static IObjectType<IModelSnapshot, IModel> Model = Types
-                       .Object<IModelSnapshot, IModel>("Model")
-                       .Proxy(x => new ModelProxy(x))
-                       .Snapshot(() => new ModelSnapshot())
-                       .Mutable(o => o.To, Types.String, "world")
-                       .Action<string>(o => o.SetTo(null), (o, to) => o.To = to);
-
         #region Factory Tests
 
         [Fact]
         public void TestFactoryCreation()
         {
-            var instance = Model.Create();
+            var instance = ModelType.Create();
 
             Assert.Equal("world", instance.To);
 
@@ -71,7 +26,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestFactorySnapshotCreation()
         {
-            var instance = Model.Create();
+            var instance = ModelType.Create();
 
             Assert.Equal("world", instance.To);
 
@@ -87,7 +42,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestRestoreSnapshotState()
         {
-            var instance = Model.Create(new ModelSnapshot { To = "universe" });
+            var instance = ModelType.Create(new ModelSnapshot { To = "universe" });
 
             Assert.Equal("universe", instance.To);
 
@@ -107,7 +62,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestEmitSnapshots()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             model.Unprotected();
 
@@ -124,7 +79,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestDefaultSnapshot()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             var snapshot = model.GetSnapshot<IModelSnapshot>();
 
@@ -135,7 +90,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestApplySnapshots()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             // model.Unprotected();
 
@@ -154,7 +109,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestEmitPatches()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             model.Unprotected();
 
@@ -174,7 +129,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestApplyPatche()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             model.Unprotected();
 
@@ -189,7 +144,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestApplyPatches()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             model.Unprotected();
 
@@ -208,7 +163,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestDisposePatchListening()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             model.Unprotected();
 
@@ -241,7 +196,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestActionIsCalled()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             model.SetTo("universe");
 
@@ -254,7 +209,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestEmitActionCall()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             var calls = new List<ISerializedActionCall>();
 
@@ -271,7 +226,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestApplyActionCalls()
         {
-            var model = Model.Create();
+            var model = ModelType.Create();
 
             var calls = new ISerializedActionCall[]
             {

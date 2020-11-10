@@ -14,11 +14,13 @@ namespace Skclusive.Mobx.StateTree
 
         public Func<S> Snapshoty { set;  get; }
 
-        public IReadOnlyDictionary<string, IType> Properties { set; get; } = new Dictionary<string, IType>();
+        public IReadOnlyDictionary<Hook, List<Action<object[]>>> Hooks { set; get; } = new Dictionary<Hook, List<Action<object[]>>>();
 
         public IReadOnlyCollection<Func<object, object>> Initializers { set; get; } = new List<Func<object, object>>();
 
         public IReadOnlyCollection<IMutableProperty> Mutables { set; get; } = new List<IMutableProperty>();
+
+        public IReadOnlyCollection<IVolatileProperty> Volatiles { set; get; } = new List<IVolatileProperty>();
 
         public IReadOnlyCollection<IViewProperty> Views { set; get; } = new List<IViewProperty>();
 

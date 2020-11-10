@@ -1,5 +1,6 @@
 ﻿using Skclusive.Mobx.Observable;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -9,24 +10,75 @@ namespace Skclusive.Mobx.StateTree
     {
         private static int NextNodeId = 1;
 
+        //private readonly object _initialSnapshot;
+
+        //private readonly Func<object, object> _createNewInstance;
+
+        //private readonly Action<INode, object, object[]> _finalizeNewInstance;
+
+        private IAtom SubpathAtom { set; get; }
+
+        public string Subpath { set; get; }
+
+        private string EscapedSubpath { set; get; }
+
+        public ObjectNode Parent { set; get; }
+
+        public string IdentifierAttribute { get; }
+
+        public string Identifier { get; }
+
+        public bool AutoUnbox { protected set; get; }
+
+        protected NodeLifeCycle State { set; get; }
+
+        public IList<IMiddleware> Middlewares { set; get; }
+
+        protected IList<Action<object>> SnapshotSubscribers { set; get; }
+
+        protected IList<Action> DisposerSubscribers { set; get; }
+
+        protected IList<Action<IJsonPatch, IJsonPatch>> PatchSubscribers { set; get; }
+
+        public bool IsProtectionEnabled { set; get; }
+
+        internal bool _IsRunningAction { set; get; }
+
+        public int NodeId { get; private set; }
+
+        public IType Type { set; get; }
+
+        // public IDictionary<string, object> StoredValue { set; get; }
+
+        public object StoredValue { set; get; }
+
+        //private IMap<string, INode> ChildNodes { get; }
+
+        public IdentifierCache IdentifierCache { set; get; }
+
+        private bool _hasSnapshotReaction;
+
         public ObjectNode(IType type,
             ObjectNode parent, string subpath,
             IEnvironment environment,
-            object initialValue, object storedValue,
-            bool canAttachTreeNode,
-            Action<INode, object> finalize)
+            object initialSnapshot,
+            Func<object, IStateTreeNode, object> createNewInstance,
+            Action<INode, object, IStateTreeNode> finalizeNewInstance = null)
         {
             NodeId = ++NextNodeId;
 
             Type = type;
 
-            StoredValue = storedValue;
+            //_initialSnapshot = initialSnapshot;
+            //_createNewInstance = createNewInstance;
+            //_finalizeNewInstance = finalizeNewInstance;
 
-            _SubPath = ObservableValue<string>.From();
+            State = NodeLifeCycle.INITIALIZING;
+
+            SubpathAtom = new Atom("path");
 
             Subpath = subpath;
-
-            _Parent = ObservableValue<ObjectNode>.From();
+            EscapedSubpath = subpath.EscapeJsonPath();
 
             Parent = parent;
 
@@ -38,41 +90,55 @@ namespace Skclusive.Mobx.StateTree
 
             AutoUnbox = true;
 
-            State = NodeLifeCycle.INITIALIZING;
-
             PreBoot();
 
-            PreCompute();
+            if (type is IObjectType objectType)
+            {
+                IdentifierAttribute = objectType.IdentifierAttribute;
+
+                // identifier can not be changed during lifecycle of a node
+                // so we safely can read it from initial snapshot
+
+                if (!string.IsNullOrWhiteSpace(IdentifierAttribute))
+                {
+                    Identifier = Convert.ToString(StateTreeUtils.GetPropertyValue(initialSnapshot, IdentifierAttribute));
+                }
+            }
 
             if (parent == null)
             {
                 IdentifierCache = new IdentifierCache();
             }
 
-            if (canAttachTreeNode)
+            var childNodes = type.InitializeChildNodes(this, initialSnapshot);
+
+            if (parent == null)
             {
-                NodeCache.Add(StoredValue, new StateTreeNode(this));
+                IdentifierCache.AddNodeToCache(this);
             }
+            else
+            {
+                parent.Root.IdentifierCache.AddNodeToCache(this);
+            }
+
+            IStateTreeNode meta = new StateTreeNode(this);
+
+            StoredValue = createNewInstance(childNodes, meta);
+
+            PostBoot();
+
+            PreCompute();
 
             bool sawException = true;
             try
             {
                 _IsRunningAction = true;
 
-                finalize?.Invoke(this, initialValue);
+                finalizeNewInstance?.Invoke(this, childNodes, meta);
 
                 _IsRunningAction = false;
 
-                if (parent != null)
-                {
-                    parent.Root.IdentifierCache?.AddNodeToCache(this);
-                }
-                else
-                {
-                    IdentifierCache?.AddNodeToCache(this);
-                }
-
-                FireHook("afterCreate");
+                FireHook(Hook.AfterCreate);
 
                 State = NodeLifeCycle.CREATED;
 
@@ -87,23 +153,37 @@ namespace Skclusive.Mobx.StateTree
                 }
             }
 
-            var disposer = Reactions.Reaction<object>((r) => Snapshot, (snapshot, r) => EmitSnapshot(snapshot));
+            // NOTE: we need to touch snapshot, because non-observable
+            // "observableInstanceCreated" field was touched
+            // _Snapshot.TrackAndCompute();
 
-            AddDisposer(() => disposer.Dispose());
+            if (IsRoot)
+            {
+                AddSnapshotReaction();
+            }
+
+            FinalizeCreation();
+
+            // _childNodes = null;
+            // _initialSnapshot = null;
+            // _createNewInstance = null;
+            // _finalizeNewInstance = null;
+        }
+
+        private void AddSnapshotReaction()
+        {
+            if (!_hasSnapshotReaction)
+            {
+                _hasSnapshotReaction = true;
+
+                var disposer = Reactions.Reaction((r) => Snapshot, (snapshot, r) => EmitSnapshot(snapshot));
+
+                AddDisposer(() => disposer.Dispose());
+            }
         }
 
         private void PreCompute()
         {
-            _Path = ComputedValue<string>.From(() =>
-            {
-                if (Parent == null)
-                {
-                    return "";
-                }
-
-                return $"{Parent.Path}/{Subpath.EscapeJsonPath()}";
-            });
-
             _Value = ComputedValue<object>.From(() =>
             {
                 if (!IsAlive)
@@ -123,66 +203,37 @@ namespace Skclusive.Mobx.StateTree
             });
         }
 
-        private void InvalidateComputedPath()
-        {
-            _Path.TrackAndCompute();
-        }
-
-        public string IdentifierAttribute { set; get; }
-
-        public bool AutoUnbox { protected set; get; }
-
-        protected NodeLifeCycle State { set; get; }
-
-        public IList<IMiddleware> Middlewares { set; get; }
-
-        protected IList<Action<object>> SnapshotSubscribers { set; get; }
-
-        protected IList<Action> DisposerSubscribers { set; get; }
-
-        protected IList<Action<IJsonPatch, IJsonPatch>> PatchSubscribers { set; get; }
-
-        public bool IsProtectionEnabled { set; get; }
-
-        internal bool _IsRunningAction { set; get; }
-
-        private IObservableValue<string> _SubPath { set; get; }
-
-        public string Subpath { set => (_SubPath as IValueWriter<string>).Value = value; get => (_SubPath as IValueReader<string>).Value; }
-
-        private IObservableValue<ObjectNode> _Parent { set; get; }
-
-        public ObjectNode Parent { protected set => (_Parent as IValueWriter<ObjectNode>).Value = value; get => (_Parent as IValueReader<ObjectNode>)?.Value; }
-
-        public int NodeId { get; private set; }
-
-        public IType Type { set; get; }
-
-        // public IDictionary<string, object> StoredValue { set; get; }
-
-        public object StoredValue { set; get; }
-
-        private IComputedValue<string> _Path { set; get; }
-
         private IComputedValue<object> _Value { set; get; }
 
         private IComputedValue<object> _Snapshot { set; get; }
 
-        public string Path { get => _Path.Value; }
+        public string Path
+        {
+            get
+            {
+                SubpathAtom.ReportObserved();
 
-        public bool IsRoot { get => Parent == null; }
+                if (Parent == null)
+                {
+                    return "";
+                }
+
+                return $"{Parent.Path}/{EscapedSubpath}";
+            }
+        }
+
+        public bool IsRoot => Parent == null;
 
         public ObjectNode Root
         {
             get
             {
-                ObjectNode parent = null;
-                ObjectNode root = this;
-                while ((parent = root.Parent) != null)
+                if (Parent != null)
                 {
-                    root = parent;
+                    return Parent.Root;
                 }
-                return root;
+
+                return this;
             }
         }
 
@@ -199,7 +250,10 @@ namespace Skclusive.Mobx.StateTree
             SnapshotSubscribers = new List<Action<object>>();
 
             PatchSubscribers = new List<Action<IJsonPatch, IJsonPatch>>();
+        }
 
+        private void PostBoot()
+        {
             _ApplyPatches = StateTreeAction.CreateActionInvoker<IJsonPatch[]>
             (
                 StoredValue, "@APPLY_PATCHES",
@@ -251,25 +305,12 @@ namespace Skclusive.Mobx.StateTree
         {
             get
             {
-                // TODO: added to fix bug. need to investigate
+                // // TODO: added to fix bug. need to investigate
                 _Snapshot.TrackAndCompute();
 
-               return _Snapshot.Value;
+                return _Snapshot.Value;
             }
         }
-
-        public string Identifier { get => IdentifierAttribute ?? (string)FromStored(IdentifierAttribute); }
-
-        private object FromStored(string attribute)
-        {
-            if (StoredValue is IDictionary<object, object>)
-            {
-                return (StoredValue as IDictionary<object, object>)[attribute];
-            }
-            return null;
-        }
-
-        public IdentifierCache IdentifierCache { set; get; }
 
         public bool IsRunningAction
         {
@@ -319,7 +360,16 @@ namespace Skclusive.Mobx.StateTree
             }
             else
             {
-                Subpath = subpath ?? "";
+                var newSubpath = subpath ?? Subpath;
+
+                if (newSubpath != Subpath)
+                {
+                    Subpath = newSubpath;
+
+                    EscapedSubpath = Subpath.EscapeJsonPath();
+
+                    SubpathAtom.ReportChanged();
+                }
 
                 if (newParent != null && newParent != parent)
                 {
@@ -327,23 +377,24 @@ namespace Skclusive.Mobx.StateTree
 
                     Parent = newParent;
 
-                    FireHook("afterAttach");
-                }
+                    SubpathAtom.ReportChanged();
 
-                InvalidateComputedPath();
+                    FireHook(Hook.AfterAttach);
+                }
             }
         }
 
-        protected void FireHook(string name)
+        protected void FireHook(Hook hook)
         {
-            object action = FromStored(name);
-            if (action is Func<object, object>)
+            if (StoredValue is IObservableObject observableObject)
             {
-                (action as Func<object, object>).Invoke(StoredValue);
-            }
-            else if (action is Action<object>)
-            {
-                (action as Action<object>).Invoke(StoredValue);
+                var lastIsRunningAction = _IsRunningAction;
+
+                _IsRunningAction = true;
+
+                observableObject.TryInvokeAction(hook.ToString(), Array.Empty<object>(), out _);
+
+                _IsRunningAction = lastIsRunningAction;
             }
         }
 
@@ -410,16 +461,7 @@ namespace Skclusive.Mobx.StateTree
 
         public object Unbox(INode node)
         {
-            if (node != null && node.Parent != null)
-            {
-                node.Parent.AssertAlive();
-            }
-
-            if (node != null && node.AutoUnbox)
-            {
-                return node.Value;
-            }
-            return node;
+            return node.Unbox<object>();
         }
 
         public override string ToString()
@@ -441,7 +483,7 @@ namespace Skclusive.Mobx.StateTree
                         // parent not ready yet, postpone
                         return;
                     }
-                    FireHook("afterAttach");
+                    FireHook(Hook.AfterAttach);
                 }
 
                 State = NodeLifeCycle.FINALIZED;
@@ -465,7 +507,7 @@ namespace Skclusive.Mobx.StateTree
 
             if (!IsRoot)
             {
-                FireHook("beforeDetach");
+                FireHook(Hook.BeforeDetach);
 
                 Environment = Root.Environment; // make backup of environment
 
@@ -479,9 +521,11 @@ namespace Skclusive.Mobx.StateTree
 
                 Subpath = "";
 
-                State = NodeLifeCycle.FINALIZED;
+                EscapedSubpath = "";
 
-                InvalidateComputedPath();
+                SubpathAtom.ReportChanged();
+
+                State = NodeLifeCycle.FINALIZED;
             }
         }
 
@@ -518,7 +562,7 @@ namespace Skclusive.Mobx.StateTree
                 disposer();
             }
 
-            FireHook("beforeDestroy");
+            FireHook(Hook.BeforeDestroy);
         }
 
         public void FinalizeDeath()
@@ -529,9 +573,9 @@ namespace Skclusive.Mobx.StateTree
 
             // addReadOnlyProp(this, "snapshot", this.snapshot);
 
-            _Parent = null;
+            // _Parent = null;
 
-            _SubPath = null;
+            // _SubPath = null;
 
             PatchSubscribers.Clear();
 
@@ -540,12 +584,12 @@ namespace Skclusive.Mobx.StateTree
             DisposerSubscribers.Clear();
 
             State = NodeLifeCycle.DEAD;
-
-            InvalidateComputedPath();
         }
 
         public IDisposable OnSnapshot(Action<object> onChange)
         {
+            AddSnapshotReaction();
+
             SnapshotSubscribers.Add(onChange);
 
             return new Disposable(() => SnapshotSubscribers.Remove(onChange));

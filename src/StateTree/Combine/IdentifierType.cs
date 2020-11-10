@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Skclusive.Mobx.StateTree
 {
-    public class IdentifierType<T> : Type<T, T>
+    public class IdentifierType<T> : Type<T, T>, IIdentifierType<T>
     {
-        public IdentifierType(IType<T, T> type) : base($"identifier(${type.Name})")
+        public IdentifierType(string name, IType<T, T> type) : base(name)
         {
             _Type = type;
 
@@ -17,24 +17,24 @@ namespace Skclusive.Mobx.StateTree
 
         private IType<T, T> _Type { set; get; }
 
-        public override string Describe => $"identifier({_Type.Describe})";
+        public override string Describe => Name;
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object initialValue)
         {
-            if (parent == null || !parent.StoredValue.IsStateTreeNode())
+            if (parent == null || !(parent.Type.Flags == TypeFlags.Object))
             {
-                throw new InvalidOperationException($"Identifier types can only be instantiated as direct child of a model type");
+                throw new InvalidOperationException($"{Name} can only be instantiated as direct child of a model type");
             }
 
-            if (parent is ObjectNode oparent)
-            {
-                if (!String.IsNullOrWhiteSpace(oparent.IdentifierAttribute))
-                {
-                    throw new InvalidOperationException($"Cannot define property '{subpath}' as object identifier, property '{oparent.IdentifierAttribute}' is already defined as identifier property");
-                }
+            //if (parent is ObjectNode oparent)
+            //{
+            //    if (!String.IsNullOrWhiteSpace(oparent.IdentifierAttribute))
+            //    {
+            //        throw new InvalidOperationException($"Cannot define property '{subpath}' as object identifier, property '{oparent.IdentifierAttribute}' is already defined as identifier property");
+            //    }
 
-                oparent.IdentifierAttribute = subpath;
-            }
+            //    oparent.IdentifierAttribute = subpath;
+            //}
 
             return this.CreateNode(parent as ObjectNode, subpath, environment, initialValue);
         }
@@ -43,7 +43,7 @@ namespace Skclusive.Mobx.StateTree
         {
             if (current.StoredValue != newValue)
             {
-                throw new InvalidOperationException($"Tried to change identifier from '{current.StoredValue}' to '{newValue}'. Changing identifiers is not allowed.");
+                throw new InvalidOperationException($"Tried to change {Name} from '{current.StoredValue}' to '{newValue}'. Changing identifiers is not allowed.");
             }
 
             return current;
@@ -51,7 +51,7 @@ namespace Skclusive.Mobx.StateTree
 
         protected override IValidationError[] IsValidSnapshot(object value, IContextEntry[] context)
         {
-            if (value == null || value is string || value is int)
+            if (value == null || value.GetType() == typeof (T))
             {
                 return _Type.Validate(value, context);
             }
@@ -64,9 +64,30 @@ namespace Skclusive.Mobx.StateTree
 
                     Value = value,
 
-                    Message = $"Value is not a valid identifier, which is a string or a number"
+                    Message = $"Value is not a valid {Name}, which should be {typeof(T).Name}"
                 }
             };
+        }
+    }
+
+    public class StringIdentifierType : IdentifierType<string>
+    {
+        public StringIdentifierType() : base("identifier", new StringType())
+        {
+        }
+    }
+
+    public class IntIdentifierType : IdentifierType<int>
+    {
+        public IntIdentifierType() : base("identifierInt", new IntType())
+        {
+        }
+    }
+
+    public class GuidIdentifierType : IdentifierType<Guid>
+    {
+        public GuidIdentifierType() : base("identifierGuid", new GuidType())
+        {
         }
     }
 }

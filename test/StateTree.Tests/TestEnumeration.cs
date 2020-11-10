@@ -1,22 +1,10 @@
 using Xunit;
+using static Skclusive.Mobx.StateTree.Tests.TestTypes;
 
 namespace Skclusive.Mobx.StateTree.Tests
 {
-    public enum Filter : int
-    {
-        None = 0,
-
-		Active = 1,
-
-		Completed = 2,
-
-        All = 3
-    }
-
     public class TestEnumeration
     {
-        private readonly static IType<Filter, Filter> FilterType = Types.Enumeration("Filter", Filter.None, Filter.Active, Filter.Completed, Filter.All);
-
         [Fact]
         public void TestCreate()
         {

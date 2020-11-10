@@ -7,7 +7,7 @@ namespace Skclusive.Mobx.StateTree
     {
         public CoreType(string name, TypeFlags flags,
             Func<object, bool> checker,
-            Func<object, T> initializer = null) : base(name)
+            Func<object, IStateTreeNode, object> initializer = null) : base(name)
         {
             ShouldAttachNode = false;
 
@@ -15,14 +15,14 @@ namespace Skclusive.Mobx.StateTree
 
             Checker = checker;
 
-            Initializer = initializer ?? ((value) => (T)value);
+            Initializer = initializer ?? ((value, meta) => value);
         }
 
         public Func<object, bool> Checker { get; private set; }
 
-        public Func<object, T> Initializer { get; private set; }
+        public Func<object, IStateTreeNode, object> Initializer { get; private set; }
 
-        public override string Describe { get => Name; }
+        public override string Describe => Name;
 
         public override INode Instantiate(INode parent, string subpath, IEnvironment environment, object snapshot)
         {

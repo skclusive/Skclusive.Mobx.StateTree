@@ -12,6 +12,20 @@ namespace Skclusive.Mobx.StateTree
             return node is ScalarNode || node is ObjectNode;
         }
 
+        public static T Unbox<T>(this INode node)
+        {
+            if (node != null && node.Parent != null)
+            {
+                node.Parent.AssertAlive();
+            }
+
+            if (node != null && node.AutoUnbox)
+            {
+                return (T)node.Value;
+            }
+            return (T)node;
+        }
+
         public static INode ResolveNodeByPath(this ObjectNode bnode, string path, bool failIfResolveFails = true)
         {
             return bnode.ResolveNodeByPaths(path.SplitJsonPath(), failIfResolveFails);
@@ -68,13 +82,13 @@ namespace Skclusive.Mobx.StateTree
                                 // fall through
                             }
                         }
-                        catch (Exception ex)
+                        catch
                         {
                             if (!failIfResolveFails)
                             {
                                 return null;
                             }
-                            throw ex;
+                            throw;
                         }
                     }
 

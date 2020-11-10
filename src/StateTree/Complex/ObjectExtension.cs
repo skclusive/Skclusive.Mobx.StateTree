@@ -1,6 +1,6 @@
-﻿//using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Skclusive.Mobx.Observable;
 
 namespace Skclusive.Mobx.StateTree
 {
@@ -8,7 +8,22 @@ namespace Skclusive.Mobx.StateTree
     {
         public static bool IsStateTreeNode(this object value)
         {
-            return value != null && (value is IStateTreeNode || NodeCache.Contains(value));
+            if (value == null)
+            {
+                return false;
+            }
+
+            if (value is IStateTreeNode)
+            {
+                return true;
+            }
+
+            if (value is IObservableMeta observableMeta)
+            {
+                return observableMeta.Meta is IStateTreeNode;
+            }
+
+            return false;
         }
 
         //public static IType<S, T> GetNodeType<S, T>(this IStateTreeNode node)
@@ -78,9 +93,12 @@ namespace Skclusive.Mobx.StateTree
                     return snode;
                 }
 
-                if (NodeCache.TryGetValue(node, out IStateTreeNode tnode))
+                if (node is IObservableMeta observableMeta)
                 {
-                    return tnode;
+                    if (observableMeta.Meta is IStateTreeNode mnode)
+                    {
+                        return mnode;
+                    }
                 }
             }
 
@@ -96,9 +114,12 @@ namespace Skclusive.Mobx.StateTree
                     return snode.TreeNode as ObjectNode;
                 }
 
-                if (NodeCache.TryGetValue(node, out IStateTreeNode tnode))
+                if (node is IObservableMeta observableMeta)
                 {
-                    return tnode.TreeNode as ObjectNode;
+                    if (observableMeta.Meta is IStateTreeNode mnode)
+                    {
+                        return mnode.TreeNode as ObjectNode;
+                    }
                 }
             }
 

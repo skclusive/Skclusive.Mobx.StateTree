@@ -1,133 +1,32 @@
 using Skclusive.Mobx.Observable;
 using Xunit;
+using static Skclusive.Mobx.StateTree.Tests.TestTypes;
 
 namespace Skclusive.Mobx.StateTree.Tests
 {
-
-    #region ICounter
-
-    public interface ICounterProps
-    {
-        int Count { set; get; }
-    }
-
-    public interface ICounterActions
-    {
-        void Increment();
-    }
-
-    public interface ICounter : ICounterProps, ICounterActions
-    {
-    }
-
-    internal class CounterSnapshot : ICounterProps
-    {
-        public int Count { set; get; }
-    }
-
-    internal class CounterProxy : ObservableProxy<ICounter, INode>, ICounter
-    {
-        public override ICounter Proxy => this;
-
-        public CounterProxy(IObservableObject<ICounter, INode> target) : base(target)
-        {
-        }
-
-        public int Count
-        {
-            get => Read<int>(nameof(Count));
-            set => Write(nameof(Count), value);
-        }
-
-        public void Increment()
-        {
-            (Target as dynamic).Increment();
-        }
-    }
-
-    #endregion
-
-    #region ICounterAudit
-
-    public interface ICounterAuditProps : ICounterProps
-    {
-        int Called { set; get; }
-    }
-
-    public interface ICounterAudit : ICounterAuditProps, ICounter
-    {
-    }
-
-    internal class CounterAuditSnapshot : CounterSnapshot, ICounterAuditProps
-    {
-        public int Called { set; get; }
-    }
-
-    internal class CounterAuditProxy : ObservableProxy<ICounterAudit, INode>, ICounterAudit
-    {
-        public override ICounterAudit Proxy => this;
-
-        public CounterAuditProxy(IObservableObject<ICounterAudit, INode> target) : base(target)
-        {
-        }
-
-        public int Called
-        {
-            get => Read<int>(nameof(Called));
-            set => Write(nameof(Called), value);
-        }
-
-        public int Count
-        {
-            get => Read<int>(nameof(Count));
-            set => Write(nameof(Count), value);
-        }
-
-        public void Increment()
-        {
-            (Target as dynamic).Increment();
-        }
-    }
-
-    #endregion
-
     public class TestCounter
     {
 
         [Fact]
         public void TestComposeActionOverride()
         {
-            var Counter = Types.
-                      Object<ICounterProps, ICounter>("Counter")
-                     .Proxy(x => new CounterProxy(x))
-                     .Snapshot(() => new CounterSnapshot())
-                     .Mutable(o => o.Count, Types.Optional(Types.Int, 0))
-                     .Action(o => o.Increment(), (o) => o.Count++);
-
-            var CounterExt = Counter.Action(o => o.Increment(), (o) => o.Count += 10);
+            var CounterExt = CounterType.Action(o => o.Increment(), (o) => o.Count += 10);
 
             var counter = CounterExt.Create();
 
             Assert.Equal(0, counter.Count);
-            Assert.Equal(0, counter.GetSnapshot<ICounterProps>().Count);
+            Assert.Equal(0, counter.GetSnapshot<ICounterSnapshot>().Count);
 
             counter.Increment();
 
             Assert.Equal(10, counter.Count);
-            Assert.Equal(10, counter.GetSnapshot<ICounterProps>().Count);
+            Assert.Equal(10, counter.GetSnapshot<ICounterSnapshot>().Count);
         }
 
         [Fact]
         public void TestGlobalReaction()
         {
-            var Counter = Types.
-                      Object<ICounterProps, ICounter>("Counter")
-                     .Proxy(x => new CounterProxy(x))
-                     .Snapshot(() => new CounterSnapshot())
-                     .Mutable(o => o.Count, Types.Optional(Types.Int, 0))
-                     .Action(o => o.Increment(), (o) => o.Count++);
-
-            var counter = Counter.Create();
+            var counter = CounterType.Create();
 
             counter.Unprotected();
 
@@ -157,14 +56,7 @@ namespace Skclusive.Mobx.StateTree.Tests
         [Fact]
         public void TestComponseAddProps()
         {
-            var Counter = Types.
-                    Object<ICounterProps, ICounter>("Counter")
-                   .Proxy(x => new CounterProxy(x))
-                   .Snapshot(() => new CounterSnapshot())
-                   .Mutable(o => o.Count, Types.Optional(Types.Int, 0))
-                   .Action(o => o.Increment(), (o) => o.Count++);
-
-            var CounterAudit = Types.Compose<ICounterAuditProps, ICounterAudit, ICounterProps, ICounter>("CounterAudit", Counter)
+            var CounterAudit = Types.Compose<ICounterAuditSnapshot, ICounterAudit, ICounterSnapshot, ICounter>("CounterAudit", CounterType)
                 .Proxy(x => new CounterAuditProxy(x))
                 .Snapshot(() => new CounterAuditSnapshot())
                 .Mutable(o => o.Called, Types.Optional(Types.Int, 0));
@@ -180,8 +72,8 @@ namespace Skclusive.Mobx.StateTree.Tests
 
             Assert.Equal(20, counter.Called);
 
-            Assert.Equal(0, counter.GetSnapshot<ICounterProps>().Count);
-            Assert.Equal(20, counter.GetSnapshot<ICounterAuditProps>().Called);
+            Assert.Equal(0, counter.GetSnapshot<ICounterSnapshot>().Count);
+            Assert.Equal(20, counter.GetSnapshot<ICounterAuditSnapshot>().Called);
         }
     }
 }

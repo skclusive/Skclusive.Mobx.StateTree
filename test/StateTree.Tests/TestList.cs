@@ -11,7 +11,7 @@ namespace Skclusive.Mobx.StateTree.Tests
 
             list.Unprotected();
 
-            list.Insert(0, 2);
+            list.Add(2);
 
             var snapshots = list.GetSnapshot<int[]>();
 

@@ -10,11 +10,13 @@ namespace Skclusive.Mobx.StateTree
 
         IReadOnlyCollection<IMutableProperty> Mutables { get; }
 
+        IReadOnlyDictionary<Hook, List<Action<object[]>>> Hooks { get; }
+
+        IReadOnlyCollection<IVolatileProperty> Volatiles { get; }
+
         IReadOnlyCollection<IViewProperty> Views { get; }
 
         IReadOnlyCollection<IActionProperty> Actions { get; }
-
-        IReadOnlyDictionary<string, IType> Properties { get; }
 
         IReadOnlyCollection<Func<object, object>> Initializers { get; }
 

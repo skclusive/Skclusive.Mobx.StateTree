@@ -1,4 +1,5 @@
-﻿using Skclusive.Mobx.Observable;
+﻿using Skclusive.Core.Collection;
+using Skclusive.Mobx.Observable;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,16 @@ namespace Skclusive.Mobx.StateTree
     public abstract class ObjectType<S, T, I> : ComplexType<S, T>, IObjectType<S, T, I>, IManipulator<INode, object>
         where I : IObjectType<S, T, I>
     {
+        protected Func<object, object> PreProcessor { set; get; }
+
+        protected Func<IObservableObject<T, INode>, T> Proxify { set; get; }
+
+        protected Func<S> Snapshoty { set; get; }
+
+        // protected ObjectNode Node { set; get; }
+
+        public string IdentifierAttribute { get; private set; }
+
         protected ObjectType(string name = "AnonymousObject") : base(name)
         {
         }
@@ -28,6 +39,10 @@ namespace Skclusive.Mobx.StateTree
 
             Views = config.Views;
 
+            Hooks = config.Hooks;
+
+            Volatiles = config.Volatiles;
+
             Actions = config.Actions;
 
             Proxify = config.Proxify;
@@ -35,27 +50,47 @@ namespace Skclusive.Mobx.StateTree
             Snapshoty = config.Snapshoty;
 
             Properties = ToProperties();
+
+            IdentifierAttribute = FindIdentifierAttribute();
         }
 
-        protected Func<object, object> PreProcessor { set; get; }
+        private string FindIdentifierAttribute()
+        {
+            var identifiers = Properties
+                // not to evaluate late types. Late types may not be Identifier type
+                .Where(property => !(property.Value is ILateType))
+                .Where(property => property.Value.Flags == TypeFlags.Identifier).Select(property => property.Key);
 
-        protected Func<IObservableObject<T, INode>, T> Proxify { set; get; }
+            var identifierAttribute = "";
 
-        protected Func<S> Snapshoty { set; get; }
+            foreach (var identifier in identifiers)
+            {
+                if (!string.IsNullOrWhiteSpace(identifierAttribute))
+                {
+                    throw new Exception($"Cannot define property '{identifier}' as object identifier, property '{identifierAttribute}' is already defined as identifier property");
+                }
 
-        protected ObjectNode Node { set; get; }
+                identifierAttribute = identifier;
+            }
+
+            return identifierAttribute;
+        }
 
         public IReadOnlyCollection<Func<object, object>> Initializers { private set; get; } = new List<Func<object, object>>();
 
         public IReadOnlyDictionary<string, IType> Properties { private set; get; } = new Dictionary<string, IType>();
 
+        public IReadOnlyDictionary<Hook, List<Action<object[]>>> Hooks { set; get; } = new Dictionary<Hook, List<Action<object[]>>>();
+
         public IReadOnlyCollection<IMutableProperty> Mutables { private set; get; } = new List<IMutableProperty>();
+
+        public IReadOnlyCollection<IVolatileProperty> Volatiles { private set; get; } = new List<IVolatileProperty>();
 
         public IReadOnlyCollection<IViewProperty> Views { private set; get; } = new List<IViewProperty>();
 
         public IReadOnlyCollection<IActionProperty> Actions { private set; get; } = new List<IActionProperty>();
 
-        public IEnumerable<string> PropertyNames { get => Properties.Keys; }
+        public IEnumerable<string> PropertyNames => Properties.Keys;
 
         public override string Describe
         {
@@ -148,9 +183,6 @@ namespace Skclusive.Mobx.StateTree
 
             foreach (var property in PropertyNames)
             {
-                // TODO: FIXME, make sure the observable ref is used!
-                // (getAtom(node.storedValue, name) as any).reportObserved();
-
                 var depTreeNode = TypeUtils.GetAtom(node.StoredValue, property, true);
 
                 if (depTreeNode is IAtom atom)
@@ -163,7 +195,7 @@ namespace Skclusive.Mobx.StateTree
 
             if (applyPostProcess && node.StoredValue is IDictionary<string, object> svalue)
             {
-                Func<object, object> action = svalue[Hooks.PostProcessSnapshot.ToString()] as Func<object, object>;
+                Func<object, object> action = svalue[StateTree.Hook.PostProcessSnapshot.ToString()] as Func<object, object>;
 
                 if (action != null)
                 {
@@ -206,7 +238,7 @@ namespace Skclusive.Mobx.StateTree
         {
             var value = ApplySnapshotPreProcessor(snapshot);
 
-            if (value != null && !(value is S))
+            if (value == null || value != null && !(value is S))
             {
                 return new IValidationError[]
                 {
@@ -247,39 +279,52 @@ namespace Skclusive.Mobx.StateTree
         {
             // Optimization: record all prop- view- and action names after first construction, and generate an optimal base class
             // that pre-reserves all these fields for fast object-member lookups
-            return this.CreateNode(parent as ObjectNode, subpath, environment, ApplySnapshotPreProcessor(initialValue), CreateNewInstance, FinalizeNewInstance);
+            var snapshot = initialValue.IsStateTreeNode() ? initialValue : ApplySnapshotPreProcessor(initialValue);
+            return this.CreateNode(parent as ObjectNode, subpath, environment, snapshot, (childNodes, meta) => CreateNewInstance(childNodes as IMap<string, INode>, meta), (node, childNodes, meta) => FinalizeNewInstance(node, childNodes as IMap<string, INode>));
         }
 
-        protected T CreateNewInstance(object value)
+        public override IMap<string, INode> InitializeChildNodes(INode node, object snapshot)
+        {
+            IEnvironment env = node.Environment;
+
+            return Properties.Aggregate(new Map<string, INode>(), (map, pair) =>
+            {
+                var subpath = $"{pair.Key}";
+
+                map[subpath] = pair.Value.Instantiate(node, subpath, env, GetPropertyValue((S)snapshot, pair.Key) ?? GetMutableDefault(pair.Key));
+
+                return map;
+            });
+        }
+
+        protected T CreateNewInstance(IMap<string, INode> childNodes, IStateTreeNode meta)
         {
             var observables = Mutables.Select(mutable => new ObservableProperty { Type = mutable.Kind, Name = mutable.Name, Default = mutable.Default }).ToList();
+
+            var volatiles = Volatiles.Select(xvolatile => new Observable.VolatileProperty { Type = xvolatile.Kind, Name = xvolatile.Name, Default = xvolatile.Default }).ToList();
 
             var computeds = Views.Select(view => new ComputedProperty { Type = view.Kind, Name = view.Name, Compute = view.View }).ToList();
 
             // var actions = Actions.Select(action => new ActionMethod { Name = action.Name, Action = action.Action });
 
-            ObservableTypeDef typeDef = new ObservableTypeDef(observables, computeds);
+            ObservableTypeDef typeDef = new ObservableTypeDef(observables, volatiles, computeds);
 
-            var instance = ObservableObject<T, INode>.FromAs(typeDef, Proxify, Name, this);
+            var instance = ObservableObject<T, INode>.FromAs(typeDef, Proxify, Name, this, meta);
 
             return instance;
         }
 
-        protected void FinalizeNewInstance(INode node, object snapshot)
+        protected void FinalizeNewInstance(INode node, IMap<string, INode> childNodes)
         {
             var instance = node.StoredValue as IObservableObject<T, INode>;
 
-            Node = node as ObjectNode;
+            // Node = node as ObjectNode;
 
             if (instance != null)
             {
-                foreach (var property in Properties)
+                foreach (var property in childNodes)
                 {
-                    var key = property.Key;
-
-                    var type = property.Value;
-
-                    instance.Write(key, type.Instantiate(Node, key, Node.Environment, GetPropertyValue((S)snapshot, key) ?? GetMutableDefault(key)));
+                    instance.Write(property.Key, property.Value);
                 }
 
                 foreach (var initializer in Initializers)
@@ -293,6 +338,19 @@ namespace Skclusive.Mobx.StateTree
                     {
                         observable.AddAction(action.Name, StateTreeAction.CreateActionInvoker(instance, action.Name, action.Action));
                     }
+
+                    foreach (var hook in Hooks)
+                    {
+                        var hookAction = (Action<object[]>)Delegate.Combine(hook.Value.ToArray());
+
+                        observable.AddAction(hook.Key.ToString(), Observable.Actions.CreateAction(hook.Key.ToString(), (arguments) =>
+                        {
+                            hookAction(new object[] { instance }.Concat(arguments).ToArray());
+                            return null;
+                        }));
+                    }
+
+                    //Actions.RunInAction(call.Name, action, new object[] { call.Target }.Concat(call.Arguments).ToArray())
                 }
 
                 instance.Intercept(change => WillChange(change));
@@ -361,7 +419,22 @@ namespace Skclusive.Mobx.StateTree
 
         public I Include<Sx, Tx>(IObjectType<Sx, Tx> type)
         {
-            return EnhanceWith(new ObjectTypeConfig<S, T> { Name = type.Name, Initializers = type.Initializers, Mutables = type.Mutables, Actions = type.Actions, Properties = type.Properties, Views = type.Views });
+            return EnhanceWith(new ObjectTypeConfig<S, T>
+            {
+                Name = type.Name,
+
+                Initializers = type.Initializers,
+
+                Mutables = type.Mutables,
+
+                Volatiles = type.Volatiles,
+
+                Actions = type.Actions,
+
+                Hooks = type.Hooks,
+
+                Views = type.Views
+            });
         }
 
         public I Snapshot(Func<S> snpashoty)
@@ -381,6 +454,42 @@ namespace Skclusive.Mobx.StateTree
             };
 
             return EnhanceWith(new ObjectTypeConfig<S, T> { PreProcessor = preProcessor });
+        }
+
+        public I Hook(Hook hook, Action<T> action)
+        {
+            return EnhanceWith(new ObjectTypeConfig<S, T>
+            {
+                Hooks = new Dictionary<Hook, List<Action<object[]>>>
+                {
+                    { hook, new List<Action<object[]>>{ action.Pack() } }
+                }
+            });
+        }
+
+        public I Volatile<V>(Expression<Func<T, V>> expression, V defaultValue = default)
+        {
+            var property = ExpressionUtils.GetPropertySymbol(expression);
+
+            return Volatile(property, defaultValue);
+        }
+
+        public I Volatile<V>(string property, V defaultValue = default)
+        {
+            return EnhanceWith(new ObjectTypeConfig<S, T>
+            {
+                Volatiles = new IVolatileProperty[]
+                {
+                    new VolatileProperty
+                    {
+                        Name = property,
+
+                        Default = defaultValue,
+
+                        Kind = typeof(V),
+                    }
+                }
+            });
         }
 
         public I Mutable<P>(Expression<Func<T, P>> expression, IType type, P defaultValue = default(P))
@@ -514,13 +623,22 @@ namespace Skclusive.Mobx.StateTree
             {
                 Name = config.Name ?? Name,
 
+                Hooks = new[] { Hooks, config.Hooks }
+                        .SelectMany(d => d)
+                        .GroupBy
+                        (
+                            kvp => kvp.Key,
+                            (key, kvps) => new { Key = key, Value = kvps.SelectMany(x => x.Value).ToList() }
+                        )
+                        .ToDictionary(x => x.Key, y => y.Value),
+
                 Mutables = config.Mutables.Concat(Mutables).ToList(),
+
+                Volatiles = config.Volatiles.Concat(Volatiles).ToList(),
 
                 Views = Views.Concat(config.Views).Distinct().ToList(),
 
                 Actions = Actions.Concat(config.Actions).Distinct().ToList(),
-
-                Properties = Properties.Concat(config.Properties).Distinct().ToDictionary(x => x.Key, y => y.Value),
 
                 Initializers = config.Initializers.Concat(Initializers).ToList(),
 
@@ -568,7 +686,25 @@ namespace Skclusive.Mobx.StateTree
 
         public object Dehance(INode node)
         {
-            return Node?.Unbox(node) ?? node.Value;
+            //if (node.Parent is ObjectNode parentNode)
+            //{
+            //    return (T)parentNode.Unbox(node);
+            //}
+            //else if (node is ObjectNode objectNode)
+            //{
+            //    return (T)objectNode.Unbox(node);
+            //}
+
+            if (node != null && node.Parent != null)
+            {
+                node.Parent.AssertAlive();
+            }
+
+            if (node != null && node.AutoUnbox)
+            {
+                return node.Value;
+            }
+            return node;
         }
 
         #endregion
@@ -596,29 +732,12 @@ namespace Skclusive.Mobx.StateTree
 
         protected override object GetPropertyValue(S snapshot, string property)
         {
-            return GetPropertyInfo(snapshot, property)?.GetValue(snapshot);
+            return StateTreeUtils.GetPropertyValue(snapshot, property);
         }
 
         protected override void SetPropertyValue(S snapshot, string property, object value)
         {
-            GetPropertyInfo(snapshot, property).SetValue(snapshot, value);
-        }
-
-        private static PropertyInfo GetPropertyInfo(S snapshot, string property)
-        {
-            if (snapshot == null)
-            {
-                return null;
-            }
-
-            var propInfo = snapshot.GetType().GetProperty(property);
-
-            if (propInfo == null)
-            {
-                throw new InvalidOperationException($"Property {property} is not available on Snapshot type {typeof(S).FullName}");
-            }
-
-            return propInfo;
+            StateTreeUtils.SetPropertyValue(snapshot, property, value);
         }
     }
 
