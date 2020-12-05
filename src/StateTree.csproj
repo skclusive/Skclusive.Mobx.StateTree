@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <VersionPrefix>5.1.2</VersionPrefix>
+    <VersionPrefix>5.2.0</VersionPrefix>
     <VersionSuffix>$(VersionSuffix)</VersionSuffix>
     <TargetFrameworks>netstandard2.0;net5.0</TargetFrameworks>
     <RazorLangVersion>3.0</RazorLangVersion>
@@ -20,9 +20,9 @@
     <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
   </ItemGroup>
  <ItemGroup>
-    <PackageReference Include="Skclusive.Mobx.Observable" Version="5.1.2" />
+    <PackageReference Include="Skclusive.Mobx.Observable" Version="5.2.0" />
   </ItemGroup>
   <!-- <ItemGroup>
-    <ProjectReference Include="..\..\Skclusive.Mobx.Observable\src\Observable.csproj" Version="5.1.2" />
+    <ProjectReference Include="..\..\Skclusive.Mobx.Observable\src\Observable.csproj" />
   </ItemGroup> -->
 </Project>
